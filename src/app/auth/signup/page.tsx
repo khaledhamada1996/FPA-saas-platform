@@ -13,7 +13,7 @@ export default async function SignUpPage() {
         <p className="eyebrow">منصة القائد</p>
         <h1>إنشاء حساب جديد</h1>
         <p>أنشئ حسابك ثم أنشئ مساحة العمل الخاصة بشركتك.</p>
-        <form action="/auth/signup" method="post" className="auth-form">
+        <form action="/auth/signup/submit" method="post" className="auth-form">
           <label>البريد الإلكتروني<input name="email" type="email" required autoComplete="email" /></label>
           <label>كلمة المرور<input name="password" type="password" minLength={8} required autoComplete="new-password" /></label>
           <button type="submit" className="primary-button">إنشاء الحساب</button>
