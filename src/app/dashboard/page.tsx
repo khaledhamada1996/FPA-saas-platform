@@ -51,8 +51,8 @@ export default function DashboardPage() {
               <span>{label}</span>
             </a>
           ))}
-          <span className="nav-section-title settings-title">قيد البناء</span>
-          <span className="side-link side-link-disabled"><span className="side-icon">⇧</span><span>الاستيراد والبيانات</span><em>الخطوة التالية</em></span>
+          <span className="nav-section-title settings-title">دورة البيانات</span>
+          <a className="side-link" href="/dashboard/import"><span className="side-icon">⇧</span><span>الاستيراد والبيانات</span></a>
           <span className="side-link side-link-disabled"><span className="side-icon">✦</span><span>المحلل المالي AI</span><em>بعد النموذج المالي</em></span>
         </nav>
       </aside>
