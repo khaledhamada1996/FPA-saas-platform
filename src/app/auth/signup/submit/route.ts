@@ -11,7 +11,9 @@ export async function POST(request: Request) {
   }
 
   const supabase = await createClient();
-  const emailRedirectTo = new URL("/auth", request.url).toString();
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? new URL("/", request.url).origin;
+  const emailRedirectTo = new URL("/auth", siteUrl).toString();
+
   const { data, error } = await supabase.auth.signUp({
     email,
     password,
