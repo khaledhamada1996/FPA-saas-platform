@@ -3,7 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 
 export async function POST(request: Request) {
   const form = await request.formData();
-  const email = String(form.get("email") ?? "");
+  const email = String(form.get("email") ?? "").trim();
   const password = String(form.get("password") ?? "");
   const supabase = await createClient();
   const { data, error } = await supabase.auth.signUp({ email, password });
