@@ -52,6 +52,7 @@ export default function DashboardPage() {
             </a>
           ))}
           <span className="nav-section-title settings-title">دورة البيانات</span>
+          <a className="side-link" href="/dashboard/setup"><span className="side-icon">⚙</span><span>الإعداد المالي</span></a>
           <a className="side-link" href="/dashboard/import"><span className="side-icon">⇧</span><span>الاستيراد والبيانات</span></a>
           <span className="side-link side-link-disabled"><span className="side-icon">✦</span><span>المحلل المالي AI</span><em>بعد النموذج المالي</em></span>
         </nav>
