@@ -1,17 +1,21 @@
-import { calculateVariance } from "./calculations";
+import { calculateVariance, type MoneyMinor } from "./calculations";
 
 export type VarianceDirection = "favorable" | "unfavorable" | "neutral";
 
 export interface VarianceResult {
-  amount: number;
+  amount: MoneyMinor;
   percentage: number | null;
   direction: VarianceDirection;
 }
 
-export function analyzeVariance(actual: number, plan: number, favorableWhenHigher = true): VarianceResult {
+export function analyzeVariance(
+  actual: MoneyMinor,
+  plan: MoneyMinor,
+  favorableWhenHigher = true,
+): VarianceResult {
   const variance = calculateVariance(actual, plan);
-  if (variance.amount === 0) return { ...variance, direction: "neutral" };
+  if (variance.amount === 0n) return { ...variance, direction: "neutral" };
 
-  const favorable = favorableWhenHigher ? variance.amount > 0 : variance.amount < 0;
+  const favorable = favorableWhenHigher ? variance.amount > 0n : variance.amount < 0n;
   return { ...variance, direction: favorable ? "favorable" : "unfavorable" };
 }
