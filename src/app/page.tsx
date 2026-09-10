@@ -1,31 +1,140 @@
+const modules = [
+  ["01", "الأداء الفعلي", "استورد بياناتك المالية وتحقق منها وافهم ما حدث فعليًا دون العمل بين ملفات متفرقة."],
+  ["02", "الميزانية", "ابنِ ميزانية شهرية أو ربع سنوية بإصدارات واضحة وافتراضات يمكن تتبعها ومراجعتها."],
+  ["03", "التوقعات", "حدّث توقعاتك باستمرار بناءً على الأداء الفعلي والاتجاهات والافتراضات الإدارية."],
+  ["04", "السيناريوهات", "اختبر أثر تغيير المبيعات أو الأسعار أو التكاليف أو التوظيف أو التوسع قبل اتخاذ القرار."],
+];
+
 export default function HomePage() {
   return (
-    <main style={{ maxWidth: 1120, margin: "0 auto", padding: "64px 24px" }}>
-      <section>
-        <p style={{ margin: 0, fontSize: 14, fontWeight: 700, letterSpacing: 1, color: "#64748b" }}>
-          FINANCIAL PLANNING & ANALYSIS
-        </p>
-        <h1 style={{ maxWidth: 760, margin: "16px 0", fontSize: "clamp(40px, 6vw, 72px)", lineHeight: 1.05 }}>
-          Plan with clarity. Forecast with confidence.
-        </h1>
-        <p style={{ maxWidth: 680, margin: 0, fontSize: 20, lineHeight: 1.6, color: "#475569" }}>
-          A financial planning workspace that connects actual performance, budgets, forecasts, scenarios and cash into one decision-ready model.
-        </p>
+    <main>
+      <header className="site-header">
+        <div className="container nav">
+          <a className="brand" href="#top" aria-label="منصة القائد">
+            <span className="brand-mark">ق</span>
+            <span>منصة القائد<small>التخطيط والتحليل المالي</small></span>
+          </a>
+          <nav className="nav-links" aria-label="التنقل الرئيسي">
+            <a href="#platform">المنصة</a>
+            <a href="#workflow">كيف تعمل</a>
+            <a href="#for-whom">لمن؟</a>
+          </nav>
+          <a className="nav-cta" href="#start">ابدأ الآن</a>
+        </div>
+      </header>
+
+      <section className="hero" id="top">
+        <div className="container hero-grid">
+          <div>
+            <p className="eyebrow">FINANCIAL PLANNING &amp; ANALYSIS</p>
+            <h1>حوّل أرقامك من تقارير إلى قرارات</h1>
+            <p className="hero-copy">
+              منصة متخصصة في التخطيط والتحليل المالي تجمع الأداء الفعلي والميزانيات والتوقعات والسيولة والسيناريوهات في نموذج واحد يساعد الإدارة على معرفة أين تقف وإلى أين تتجه وماذا يجب أن تفعل.
+            </p>
+            <div className="hero-actions">
+              <a className="hero-cta" href="#start">اكتشف المنصة</a>
+              <a className="text-link" href="#platform">تعرّف على الإمكانات ←</a>
+            </div>
+            <div className="trust">
+              <span>✓ بيانات فعلية وميزانيات وتوقعات</span>
+              <span>✓ سيناريوهات وقرارات مبنية على الأرقام</span>
+              <span>✓ صلاحيات وسجل تدقيق</span>
+            </div>
+          </div>
+
+          <div className="dashboard" aria-label="نموذج لوحة الإدارة المالية">
+            <div className="dashboard-top">
+              <span className="dashboard-title">نظرة الإدارة المالية</span>
+              <span className="status">أكتوبر 2026</span>
+            </div>
+            <div className="metric-grid">
+              <div className="metric"><span>الإيرادات</span><strong>4.82 م</strong><em>↑ 8.4% عن التوقع</em></div>
+              <div className="metric"><span>هامش الربح</span><strong>31.6%</strong><em>↑ 2.1 نقطة</em></div>
+              <div className="metric"><span>EBITDA</span><strong>1.14 م</strong><em>على الخطة</em></div>
+              <div className="metric"><span>السيولة</span><strong>2.36 م</strong><em>12.4 شهر تغطية</em></div>
+            </div>
+            <div className="chart">
+              <div className="chart-head"><span>الإيرادات الفعلية مقابل التوقع</span><span>يناير — أكتوبر</span></div>
+              <div className="bars" aria-hidden="true">
+                <i className="bar" style={{ height: "42%" }} /><i className="bar" style={{ height: "52%" }} /><i className="bar" style={{ height: "47%" }} /><i className="bar" style={{ height: "64%" }} /><i className="bar" style={{ height: "72%" }} /><i className="bar" style={{ height: "66%" }} /><i className="bar" style={{ height: "84%" }} /><i className="bar" style={{ height: "78%" }} />
+              </div>
+            </div>
+          </div>
+        </div>
       </section>
 
-      <section style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 16, marginTop: 56 }}>
-        {[
-          ["Actuals", "Import, validate and understand financial performance."],
-          ["Budget", "Build versioned plans from company and department assumptions."],
-          ["Forecast", "Keep the outlook current with rolling forecast versions."],
-          ["Scenarios", "Test changes before they become decisions."],
-        ].map(([title, description]) => (
-          <article key={title} style={{ padding: 24, border: "1px solid #e2e8f0", borderRadius: 16, background: "#fff" }}>
-            <h2 style={{ margin: "0 0 10px", fontSize: 20 }}>{title}</h2>
-            <p style={{ margin: 0, lineHeight: 1.6, color: "#64748b" }}>{description}</p>
-          </article>
-        ))}
+      <section className="section" id="platform">
+        <div className="container">
+          <div className="section-head">
+            <div className="section-kicker">من البيانات إلى القرار</div>
+            <h2>كل دورة التخطيط المالي في مكان واحد</h2>
+            <p className="section-lead">بدل جمع البيانات يدويًا ثم بناء الميزانية في ملف منفصل وتحليل الانحرافات في ملف آخر، تعمل المنصة على نموذج مالي موحد قابل للتتبع والمقارنة.</p>
+          </div>
+          <div className="features">
+            {modules.map(([number, title, description]) => (
+              <article className="feature" key={number}>
+                <span className="feature-number">{number}</span>
+                <h3>{title}</h3>
+                <p>{description}</p>
+              </article>
+            ))}
+          </div>
+        </div>
       </section>
+
+      <section className="section workflow" id="workflow">
+        <div className="container">
+          <div className="section-head">
+            <div className="section-kicker">الدورة المالية</div>
+            <h2>من البيانات إلى القرار في مسار واضح</h2>
+            <p className="section-lead">مسار مصمم لفرق المالية والإدارة: بيانات موثوقة، نموذج واضح، مقارنة دقيقة، ثم تفسير وسيناريو يساعد على اتخاذ الإجراء.</p>
+          </div>
+          <div className="flow">
+            <div className="flow-item"><b>جمع</b><span>استيراد البيانات من Excel وCSV ومصادر الأنظمة.</span></div>
+            <div className="flow-item"><b>تحقق ونمذجة</b><span>تنظيف البيانات وربطها بالنموذج المالي والأبعاد.</span></div>
+            <div className="flow-item"><b>تخطيط وتوقع</b><span>ميزانيات وتوقعات وافتراضات قابلة للإدارة.</span></div>
+            <div className="flow-item"><b>مقارنة وتفسير</b><span>تحليل الانحرافات ومعرفة ما الذي تغيّر ولماذا.</span></div>
+            <div className="flow-item"><b>سيناريو وقرار</b><span>اختبر البدائل وحدد الإجراء قبل التنفيذ.</span></div>
+          </div>
+        </div>
+      </section>
+
+      <section className="section" id="for-whom">
+        <div className="container">
+          <div className="section-head">
+            <div className="section-kicker">مصممة حسب مستوى التعقيد</div>
+            <h2>بسيطة عندما تحتاج البساطة وقوية عندما يكبر العمل</h2>
+          </div>
+          <div className="audience">
+            <article className="audience-card">
+              <h3>للشركات الصغيرة والمتوسطة</h3>
+              <p>ابدأ بميزانية وتوقعات وسيولة ولوحة إدارة واضحة دون الحاجة إلى فريق FP&amp;A كبير.</p>
+              <div className="pills"><span className="pill">ميزانية</span><span className="pill">توقعات</span><span className="pill">سيولة</span><span className="pill">مؤشرات أداء</span></div>
+            </article>
+            <article className="audience-card">
+              <h3>للشركات متعددة الإدارات والفروع</h3>
+              <p>أدر الصلاحيات ومراكز التكلفة والفروع والإصدارات والموافقات مع قابلية التوسع إلى بيئة مؤسسية متقدمة.</p>
+              <div className="pills"><span className="pill">فروع وكيانات</span><span className="pill">صلاحيات</span><span className="pill">موافقات</span><span className="pill">سيناريوهات</span></div>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <section className="final-cta" id="start">
+        <div className="container">
+          <div className="section-kicker">منصة مالية مبنية للقرار</div>
+          <h2>خطط أفضل. توقّع بوضوح. قرر بثقة.</h2>
+          <p>منصة FP&amp;A تجمع التخطيط والتحليل وإدارة السيناريوهات والسيولة في تجربة مالية واحدة، مع بنية قابلة للنمو مع شركتك.</p>
+          <a className="hero-cta" href="#top">ابدأ استكشاف المنصة</a>
+        </div>
+      </section>
+
+      <footer className="footer">
+        <div className="container footer-inner">
+          <span>منصة القائد للتخطيط والتحليل المالي</span>
+          <span>Financial Planning &amp; Analysis</span>
+        </div>
+      </footer>
     </main>
   );
 }
