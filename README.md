@@ -10,6 +10,30 @@ This is **not an accounting system or ERP**. It operates as an FP&A and financia
 
 `Collect → Validate → Model → Budget → Forecast → Compare → Explain → Scenario → Decide → Act`
 
+## Implementation Status
+
+**MVP implementation in progress.**
+
+Completed foundation slices include:
+
+- Arabic RTL application shell.
+- Organization domain model.
+- PostgreSQL/Supabase migration foundation.
+- Authentication entry points.
+- Session refresh middleware.
+- Workspace creation and membership onboarding.
+- Initial tenant-aware Row Level Security policies.
+- Server-side dashboard access guard.
+
+## Environment
+
+Set the following variables in the deployment environment or local `.env.local`:
+
+- `NEXT_PUBLIC_SUPABASE_URL`
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+
+Do not commit real credentials or secrets.
+
 ## Documentation
 
 ### Product & Architecture
@@ -29,9 +53,6 @@ This is **not an accounting system or ERP**. It operates as an FP&A and financia
 - [13 SaaS Business Model](docs/13-saas-business-model.md)
 - [14 UI/UX Specification](docs/14-ui-ux-specification.md)
 - [15 Technical Decisions](docs/15-technical-decisions.md)
-
-### Pre-Implementation Specifications
-
 - [16 Domain Financial Model](docs/16-domain-financial-model.md)
 - [17 Import & Mapping Specification](docs/17-import-mapping-specification.md)
 - [18 MVP Acceptance Criteria](docs/18-mvp-acceptance-criteria.md)
@@ -39,10 +60,4 @@ This is **not an accounting system or ERP**. It operates as an FP&A and financia
 
 ## Development Rule
 
-Documentation, domain rules, acceptance criteria, and architecture are approved before production implementation. No application code should be treated as final until the corresponding product and technical decisions are approved.
-
-## Current Status
-
-**Documentation & Architecture Review → Finalized for MVP Implementation**
-
-The project is ready to move into implementation after the documentation review decision is recorded.
+Documentation, domain rules, acceptance criteria, and architecture are approved before production implementation. Each vertical slice must preserve deployability, tenant isolation, authorization, auditability, and deterministic financial correctness.
