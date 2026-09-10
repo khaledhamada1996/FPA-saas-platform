@@ -14,7 +14,7 @@ export default async function AuthPage() {
         <p className="eyebrow">منصة القائد</p>
         <h1>الدخول إلى منصة التخطيط والتحليل المالي</h1>
         <p>سجّل الدخول للوصول إلى مساحة العمل المالية الخاصة بشركتك.</p>
-        <form action="/auth/login" method="post" className="auth-form">
+        <form action="/auth/login/submit" method="post" className="auth-form">
           <label>البريد الإلكتروني<input name="email" type="email" required autoComplete="email" /></label>
           <label>كلمة المرور<input name="password" type="password" required autoComplete="current-password" /></label>
           <button type="submit" className="primary-button">تسجيل الدخول</button>
