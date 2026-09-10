@@ -6,26 +6,18 @@ export default function WorkspacePage() {
         <p className="eyebrow">الخطوة الأولى</p>
         <h1>أنشئ مساحة عمل شركتك</h1>
         <p>
-          أنشئ مساحة عمل تجريبية الآن وابدأ استخدام المنصة مباشرة. سيتم ربطها بالحساب وقاعدة البيانات عند تفعيل التسجيل لاحقًا.
+          ابدأ باستخدام المنصة مباشرة في مساحة العمل التجريبية. سيتم ربطها بالحساب وقاعدة البيانات عند تفعيل التسجيل لاحقًا.
         </p>
 
-        <form action="/dashboard" method="get" className="auth-form">
+        <div className="auth-form">
           <label>
             اسم الشركة
-            <input
-              name="workspace"
-              type="text"
-              required
-              minLength={2}
-              maxLength={120}
-              placeholder="مثال: شركة النماء التجارية"
-              autoComplete="organization"
-            />
+            <input type="text" placeholder="مثال: شركة النماء التجارية" autoComplete="organization" />
           </label>
 
           <label>
             العملة الأساسية
-            <select name="currency" defaultValue="SAR">
+            <select defaultValue="SAR">
               <option value="SAR">ريال سعودي (SAR)</option>
               <option value="AED">درهم إماراتي (AED)</option>
               <option value="KWD">دينار كويتي (KWD)</option>
@@ -37,7 +29,7 @@ export default function WorkspacePage() {
 
           <label>
             بداية السنة المالية
-            <select name="fiscalMonth" defaultValue="1">
+            <select defaultValue="1">
               {Array.from({ length: 12 }, (_, index) => (
                 <option key={index + 1} value={index + 1}>
                   {index + 1}
@@ -46,10 +38,10 @@ export default function WorkspacePage() {
             </select>
           </label>
 
-          <button type="submit" className="primary-button">
+          <a href="/dashboard" className="primary-button" role="button">
             إنشاء مساحة العمل
-          </button>
-        </form>
+          </a>
+        </div>
       </section>
     </main>
   );
