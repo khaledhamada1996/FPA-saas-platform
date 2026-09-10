@@ -31,7 +31,6 @@ export async function POST(request: Request) {
 
   const { data: limit, error: limitError } = await supabase.rpc("check_login_rate_limit", { p_key: key });
 
-  // Fail closed if the rate-limit service cannot be checked.
   if (limitError || !limit?.[0]) {
     return redirectToAuth(request, { error: "security_unavailable" });
   }
@@ -46,6 +45,10 @@ export async function POST(request: Request) {
   const { error } = await supabase.auth.signInWithPassword({ email, password });
 
   if (error) {
+    if (error.code === "email_not_confirmed" || error.message.toLowerCase().includes("email not confirmed")) {
+      return redirectToAuth(request, { error: "email_not_confirmed" });
+    }
+
     const { data: failure } = await supabase.rpc("record_login_failure", { p_key: key });
     const result = failure?.[0];
 
