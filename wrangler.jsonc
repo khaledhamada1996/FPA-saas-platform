@@ -6,9 +6,6 @@
   "compatibility_flags": [
     "nodejs_compat"
   ],
-  "build": {
-    "command": "bun run build"
-  },
   "assets": {
     "directory": ".open-next/assets",
     "binding": "ASSETS"
