@@ -19,7 +19,7 @@ export default function HomePage() {
             <a href="#workflow">كيف تعمل</a>
             <a href="#for-whom">لمن؟</a>
           </nav>
-          <a className="nav-cta" href="/auth/signup">ابدأ الآن</a>
+          <a className="nav-cta" href="/dashboard">ابدأ الآن</a>
         </div>
       </header>
 
@@ -32,8 +32,7 @@ export default function HomePage() {
               منصة متخصصة في التخطيط والتحليل المالي تجمع الأداء الفعلي والميزانيات والتوقعات والسيولة والسيناريوهات في نموذج واحد يساعد الإدارة على معرفة أين تقف وإلى أين تتجه وماذا يجب أن تفعل.
             </p>
             <div className="hero-actions">
-              <a className="hero-cta" href="/auth/signup">ابدأ الآن</a>
-              <a className="text-link" href="/auth">تسجيل الدخول ←</a>
+              <a className="hero-cta" href="/dashboard">ابدأ الآن</a>
             </div>
             <div className="trust">
               <span>✓ بيانات فعلية وميزانيات وتوقعات</span>
@@ -125,8 +124,7 @@ export default function HomePage() {
           <div className="section-kicker">منصة مالية مبنية للقرار</div>
           <h2>خطط أفضل. توقّع بوضوح. قرر بثقة.</h2>
           <p>منصة FP&amp;A تجمع التخطيط والتحليل وإدارة السيناريوهات والسيولة في تجربة مالية واحدة، مع بنية قابلة للنمو مع شركتك.</p>
-          <a className="hero-cta" href="/auth/signup">ابدأ الآن</a>
-          <a className="text-link" href="/auth" style={{ marginInlineStart: "14px" }}>تسجيل الدخول</a>
+          <a className="hero-cta" href="/dashboard">ابدأ الآن</a>
         </div>
       </section>
 
