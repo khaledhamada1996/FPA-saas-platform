@@ -5,6 +5,7 @@ import LoginStatus from "./LoginStatus";
 type AuthPageProps = {
   searchParams: Promise<{
     error?: string;
+    message?: string;
     retry?: string;
     attempts?: string;
   }>;
@@ -27,7 +28,7 @@ export default async function AuthPage({ searchParams }: AuthPageProps) {
         <h1>الدخول إلى منصة التخطيط والتحليل المالي</h1>
         <p>سجّل الدخول للوصول إلى مساحة العمل المالية الخاصة بشركتك.</p>
 
-        <LoginStatus error={params.error} retry={params.retry} attempts={params.attempts} />
+        <LoginStatus error={params.error} message={params.message} retry={params.retry} attempts={params.attempts} />
 
         {!locked && (
           <form action="/auth/login/submit" method="post" className="auth-form">
