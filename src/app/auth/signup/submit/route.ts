@@ -3,10 +3,20 @@ import { createClient } from "@/lib/supabase/server";
 
 export async function POST(request: Request) {
   const form = await request.formData();
-  const email = String(form.get("email") ?? "").trim();
+  const email = String(form.get("email") ?? "").trim().toLowerCase();
   const password = String(form.get("password") ?? "");
+
+  if (!email || password.length < 8) {
+    return NextResponse.redirect(new URL("/auth/signup?error=signup_failed", request.url), 303);
+  }
+
   const supabase = await createClient();
-  const { data, error } = await supabase.auth.signUp({ email, password });
+  const emailRedirectTo = new URL("/auth", request.url).toString();
+  const { data, error } = await supabase.auth.signUp({
+    email,
+    password,
+    options: { emailRedirectTo },
+  });
 
   if (error) {
     return NextResponse.redirect(new URL("/auth/signup?error=signup_failed", request.url), 303);
