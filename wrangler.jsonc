@@ -12,7 +12,8 @@
   },
   "vars": {
     "NEXT_PUBLIC_SUPABASE_URL": "https://qnoulgkttxvnqdiisevv.supabase.co",
-    "NEXT_PUBLIC_SUPABASE_ANON_KEY": "sb_publishable_1VEncF0WwxH9JqeAeGWBrg_EiwCBQ9X"
+    "NEXT_PUBLIC_SUPABASE_ANON_KEY": "sb_publishable_1VEncF0WwxH9JqeAeGWBrg_EiwCBQ9X",
+    "NEXT_PUBLIC_SITE_URL": "https://fpa-saas-platform.acckhaledhamada687.workers.dev"
   },
   "observability": {
     "enabled": true
