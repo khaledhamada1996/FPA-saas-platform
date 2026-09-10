@@ -1,10 +1,8 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
-import { useRouter } from "next/navigation";
 
 export default function WorkspacePage() {
-  const router = useRouter();
   const [name, setName] = useState("");
   const [currency, setCurrency] = useState("SAR");
   const [fiscalMonth, setFiscalMonth] = useState("1");
@@ -33,7 +31,10 @@ export default function WorkspacePage() {
           fiscalMonth: Number(fiscalMonth),
         }),
       );
-      router.push("/dashboard");
+
+      // Use a full browser navigation instead of client-side routing so the
+      // demo flow works even if the deployed App Router state is stale.
+      window.location.assign("/dashboard");
     } catch {
       setSubmitting(false);
       setError("تعذر إنشاء مساحة العمل على هذا المتصفح");
