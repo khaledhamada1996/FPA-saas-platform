@@ -36,8 +36,6 @@ Do not commit real credentials or secrets.
 
 ## Documentation
 
-### Product & Architecture
-
 - [01 Product Vision](docs/01-product-vision.md)
 - [02 Product Requirements](docs/02-product-requirements.md)
 - [03 Users & Permissions](docs/03-users-permissions.md)
