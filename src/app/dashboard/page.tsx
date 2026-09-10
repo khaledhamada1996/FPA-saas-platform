@@ -1,16 +1,3 @@
-const navigation = [
-  ["overview", "نظرة عامة", "⌂"],
-  ["actuals", "الأداء الفعلي", "◫"],
-  ["budget", "الميزانية", "▤"],
-  ["forecast", "التوقعات", "◌"],
-  ["scenarios", "السيناريوهات", "◇"],
-  ["cash", "السيولة", "◈"],
-  ["kpis", "مؤشرات الأداء", "◉"],
-  ["reports", "التقارير", "▥"],
-  ["ai", "المحلل المالي AI", "✦"],
-  ["imports", "البيانات والاستيراد", "⇧"],
-];
-
 const metrics = [
   ["الإيرادات", "4.82 م", "+8.4%", "مقابل التوقع"],
   ["مجمل الربح", "1.52 م", "+5.7%", "مقابل التوقع"],
@@ -35,33 +22,31 @@ export default function DashboardPage() {
         </div>
 
         <div className="workspace-switcher">
-          <span className="workspace-label">الشركة الحالية</span>
+          <span className="workspace-label">وضع العرض</span>
           <strong>شركة النماء التجارية</strong>
-          <span className="workspace-meta">السنة المالية 2026</span>
+          <span className="workspace-meta">بيانات تجريبية • السنة المالية 2026</span>
         </div>
 
         <nav className="sidebar-nav" aria-label="القائمة الرئيسية">
-          <span className="nav-section-title">مساحة العمل</span>
-          {navigation.map(([id, label, icon], index) => (
-            <a key={id} className={`side-link ${index === 0 ? "active" : ""}`} href={`#${id}`}>
-              <span className="side-icon">{icon}</span>
-              <span>{label}</span>
-              {id === "ai" && <em>جديد</em>}
-            </a>
-          ))}
-          <span className="nav-section-title settings-title">الإدارة</span>
-          <a className="side-link" href="#settings"><span className="side-icon">⚙</span><span>الإعدادات</span></a>
+          <span className="nav-section-title">نظرة الإدارة</span>
+          <a className="side-link active" href="#overview"><span className="side-icon">⌂</span><span>نظرة عامة</span></a>
+          <a className="side-link" href="#actuals"><span className="side-icon">◫</span><span>تحليل الأداء</span></a>
+          <a className="side-link" href="#cash"><span className="side-icon">◈</span><span>توقع السيولة</span></a>
+          <a className="side-link" href="#variance"><span className="side-icon">▥</span><span>تحليل الانحرافات</span></a>
+          <a className="side-link" href="#ai"><span className="side-icon">✦</span><span>المحلل المالي AI</span><em>قريبًا</em></a>
+          <span className="nav-section-title settings-title">حالة المنتج</span>
+          <span className="side-link side-link-disabled"><span className="side-icon">⇧</span><span>الاستيراد والبيانات</span><em>قريبًا</em></span>
+          <span className="side-link side-link-disabled"><span className="side-icon">⚙</span><span>الإعدادات</span><em>قريبًا</em></span>
         </nav>
 
         <div className="sidebar-bottom">
           <div className="help-card">
-            <span>تحتاج إلى مساعدة؟</span>
-            <strong>راجع دليل المنصة</strong>
+            <span>نسخة استعراضية</span>
+            <strong>البيانات الحالية غير حقيقية</strong>
           </div>
           <div className="user-row">
             <span className="avatar">خ</span>
             <div><strong>خالد</strong><small>مدير مالي</small></div>
-            <span className="dots">•••</span>
           </div>
         </div>
       </aside>
@@ -73,20 +58,25 @@ export default function DashboardPage() {
             <h1>نظرة عامة</h1>
           </div>
           <div className="topbar-actions">
-            <button className="period-button">يناير — أكتوبر 2026 <span>⌄</span></button>
-            <button className="icon-button" aria-label="الإشعارات">♢<span className="notification-dot" /></button>
-            <button className="top-user">خ</button>
+            <span className="period-button">يناير — أكتوبر 2026</span>
+            <span className="demo-badge">بيانات تجريبية</span>
+            <span className="top-user" aria-hidden="true">خ</span>
           </div>
         </header>
 
-        <div className="content">
+        <div className="content" id="overview">
+          <div className="demo-banner" role="status">
+            <strong>وضع العرض التجريبي</strong>
+            <span>الأرقام والرسوم المعروضة لأغراض توضيحية فقط. سيتم ربطها ببيانات الشركة بعد تفعيل الاستيراد والنموذج المالي.</span>
+          </div>
+
           <section className="welcome-row">
             <div>
               <p className="eyebrow">ملخص الإدارة</p>
               <h2>كيف تسير الشركة؟</h2>
               <p>الأداء الحالي أعلى من التوقع في الإيرادات وصافي الربح، مع ارتفاع يحتاج إلى متابعة في تكلفة المبيعات.</p>
             </div>
-            <a className="primary-button" href="#reports">عرض التقرير الإداري <span>←</span></a>
+            <span className="primary-button primary-button-static">التقرير الإداري — قريبًا</span>
           </section>
 
           <section className="metric-grid-app" aria-label="المؤشرات الرئيسية">
@@ -100,7 +90,7 @@ export default function DashboardPage() {
           </section>
 
           <section className="main-grid">
-            <article className="panel performance-panel">
+            <article className="panel performance-panel" id="actuals">
               <div className="panel-header">
                 <div><h3>الأداء المالي</h3><p>الإيرادات الفعلية مقابل الميزانية والتوقع</p></div>
                 <div className="legend"><span><i className="legend-actual" /> فعلي</span><span><i className="legend-plan" /> خطة</span></div>
@@ -125,14 +115,14 @@ export default function DashboardPage() {
                 <div className="attention-item"><span className="attention-icon">↗</span><div><strong>الإيرادات أعلى من التوقع</strong><p>تحسن بنسبة 8.1% عن الخطة</p></div></div>
                 <div className="attention-item"><span className="attention-icon">◷</span><div><strong>تحديث التوقع مطلوب</strong><p>آخر تحديث للتوقع منذ 18 يومًا</p></div></div>
               </div>
-              <a className="panel-link" href="#alerts">عرض جميع التنبيهات ←</a>
+              <span className="panel-link panel-link-static">التنبيهات التفصيلية — قريبًا</span>
             </article>
           </section>
 
-          <section className="panel variance-panel" id="actuals">
+          <section className="panel variance-panel" id="variance">
             <div className="panel-header">
               <div><h3>تحليل الانحرافات</h3><p>الأداء الفعلي مقارنة بالميزانية المعتمدة</p></div>
-              <a className="panel-link" href="#variance">فتح التحليل الكامل ←</a>
+              <span className="panel-link panel-link-static">التحليل التفصيلي — قريبًا</span>
             </div>
             <div className="table-wrap">
               <table>
@@ -151,12 +141,12 @@ export default function DashboardPage() {
             </article>
             <article className="panel ai-panel" id="ai">
               <div className="ai-mark">✦</div>
-              <div><p className="eyebrow">المحلل المالي AI</p><h3>اسأل عن أداء شركتك</h3><p>اعرف لماذا تغيرت الإيرادات أو أين توجد أكبر الانحرافات، بإجابات مبنية على بيانات مساحة العمل.</p></div>
-              <a className="secondary-button" href="#ask-ai">اسأل المحلل <span>←</span></a>
+              <div><p className="eyebrow">المحلل المالي AI</p><h3>اسأل عن أداء شركتك</h3><p>المحلل المالي سيصبح متاحًا بعد بناء النموذج المالي وربطه ببيانات مساحة العمل.</p></div>
+              <span className="secondary-button secondary-button-static">المحلل المالي — قريبًا</span>
             </article>
           </section>
 
-          <footer className="app-footer"><span>منصة القائد للتخطيط والتحليل المالي</span><span>بيانات العرض تجريبية حتى يتم استيراد بيانات الشركة</span></footer>
+          <footer className="app-footer"><span>منصة القائد للتخطيط والتحليل المالي</span><span>هذه نسخة استعراضية — لا تعتمد الأرقام لاتخاذ قرار مالي</span></footer>
         </div>
       </main>
     </div>
