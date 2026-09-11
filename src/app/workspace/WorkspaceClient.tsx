@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { createClient } from "@/lib/supabase/client";
+import { createClient } from "@supabase/supabase-js";
 
 type Workspace = { id: string; name: string; base_currency: string; fiscal_year_start_month: number; role: string };
 
@@ -26,7 +26,10 @@ export default function WorkspaceClient() {
     if (queryError === "workspace_creation_failed") setError("تعذر إنشاء مساحة العمل");
 
     async function loadWorkspaces() {
-      const supabase = createClient();
+      const supabase = createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+      );
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) { window.location.replace("/auth"); return; }
       const { data, error: loadError } = await supabase.from("organization_members").select("organization_id, role, organizations(id, name, base_currency, fiscal_year_start_month)").eq("user_id", user.id);
