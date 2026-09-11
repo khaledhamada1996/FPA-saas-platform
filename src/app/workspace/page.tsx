@@ -1,14 +1,13 @@
 "use client";
 
-import { Suspense, useEffect, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 
 type Workspace = { id: string; name: string; base_currency: string; fiscal_year_start_month: number; role: string };
 
-function WorkspaceContent() {
+export default function WorkspacePage() {
   const router = useRouter();
-  const searchParams = useSearchParams();
   const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -17,13 +16,14 @@ function WorkspaceContent() {
   const [fiscalMonth, setFiscalMonth] = useState("1");
 
   useEffect(() => {
-    const createdId = searchParams.get("created");
+    const params = new URLSearchParams(window.location.search);
+    const createdId = params.get("created");
     if (createdId) {
       window.localStorage.setItem("fpa_workspace_id", createdId);
       router.replace("/dashboard");
       return;
     }
-    const queryError = searchParams.get("error");
+    const queryError = params.get("error");
     if (queryError === "invalid_workspace") setError("بيانات مساحة العمل غير صحيحة");
     if (queryError === "workspace_creation_failed") setError("تعذر إنشاء مساحة العمل");
 
@@ -42,7 +42,7 @@ function WorkspaceContent() {
       setLoading(false);
     }
     void loadWorkspaces();
-  }, [router, searchParams]);
+  }, [router]);
 
   function selectWorkspace(workspace: Workspace) {
     window.localStorage.setItem("fpa_workspace_id", workspace.id);
@@ -71,13 +71,5 @@ function WorkspaceContent() {
         </div>
       </section>
     </main>
-  );
-}
-
-export default function WorkspacePage() {
-  return (
-    <Suspense fallback={<main className="auth-page" dir="rtl"><section className="auth-card workspace-card" style={{ maxWidth: 760 }}><p>جارٍ تحميل مساحات العمل...</p></section></main>}>
-      <WorkspaceContent />
-    </Suspense>
   );
 }
