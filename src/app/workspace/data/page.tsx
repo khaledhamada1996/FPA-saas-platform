@@ -137,7 +137,7 @@ export default function DataImportPage() {
 
   const mapping = useMemo(() => mapHeaders(headers), [headers]);
   const missing = required.filter((field) => !mapping[field]);
-  const valid = status === "validated" && missing.length === 0 && issues.length === 0 && rows.length > 0;
+  const canSave = missing.length === 0 && issues.length === 0 && rows.length > 0;
 
   async function handleFile(event: ChangeEvent<HTMLInputElement>) {
     const selectedFile = event.target.files?.[0];
@@ -177,7 +177,7 @@ export default function DataImportPage() {
   }
 
   async function saveImport() {
-    if (!file || !valid) return;
+    if (!file || !canSave || status !== "validated") return;
     setStatus("saving");
     setError("");
 
@@ -271,7 +271,7 @@ export default function DataImportPage() {
           <section className="rounded-3xl border border-slate-200 bg-white p-7 shadow-sm">
             <div className="flex items-center justify-between gap-4">
               <div><p className="text-sm font-bold text-slate-900">2. نتيجة التحقق</p><p className="mt-1 text-sm text-slate-500">لا يتم نشر أي Financial Facts من هذه الشاشة.</p></div>
-              {status === "validated" && <span className={`rounded-full px-3 py-1 text-xs font-bold ${valid ? "bg-emerald-50 text-emerald-700" : "bg-red-50 text-red-700"}`}>{valid ? "صالح للحفظ" : "يحتاج تصحيح"}</span>}
+              {status === "validated" && <span className={`rounded-full px-3 py-1 text-xs font-bold ${canSave ? "bg-emerald-50 text-emerald-700" : "bg-red-50 text-red-700"}`}>{canSave ? "صالح للحفظ" : "يحتاج تصحيح"}</span>}
             </div>
 
             {status === "validated" || status === "saving" || status === "saved" ? (
@@ -285,7 +285,7 @@ export default function DataImportPage() {
                 {missing.length > 0 && <div className="mt-5 rounded-2xl bg-red-50 p-5 text-sm text-red-800"><p className="font-bold">الأعمدة المطلوبة غير موجودة</p><p className="mt-2">{missing.join("، ")}</p></div>}
                 {issues.length > 0 && <div className="mt-5 max-h-64 overflow-auto rounded-2xl border border-red-100 bg-red-50 p-5"><p className="font-bold text-red-800">الأخطاء المكتشفة</p><div className="mt-3 space-y-2 text-sm text-red-700">{issues.slice(0, 100).map((issue, index) => <p key={`${issue.row}-${index}`}>السطر {issue.row}: {issue.message}</p>)}</div>{issues.length > 100 && <p className="mt-3 text-xs font-semibold">تم عرض أول 100 خطأ فقط.</p>}</div>}
 
-                {valid && status !== "saved" && <button type="button" onClick={saveImport} disabled={status === "saving"} className="mt-6 w-full rounded-xl bg-slate-950 px-6 py-4 text-sm font-bold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50">{status === "saving" ? "جاري الحفظ..." : "حفظ الاستيراد في قاعدة البيانات"}</button>}
+                {canSave && status === "validated" && <button type="button" onClick={saveImport} className="mt-6 w-full rounded-xl bg-slate-950 px-6 py-4 text-sm font-bold text-white transition hover:bg-slate-800">حفظ الاستيراد في قاعدة البيانات</button>}
                 {status === "saved" && <div className="mt-6 rounded-xl border border-emerald-200 bg-emerald-50 p-5 text-sm font-semibold leading-7 text-emerald-800">تم حفظ Import و Import Rows فقط. لن تظهر البيانات في التقارير أو Actuals حتى تمر بالمطابقة ثم النشر.</div>}
               </>
             ) : (
