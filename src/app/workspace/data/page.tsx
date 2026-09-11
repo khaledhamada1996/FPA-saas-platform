@@ -5,8 +5,6 @@ import type { ChangeEvent } from "react";
 import * as XLSX from "xlsx";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 
-// Deployment source marker: current main branch contains the validated import status fix.
-
 type Row = Record<string, unknown>;
 type ValidationIssue = { row: number; message: string };
 type ImportPayload = Record<string, string | number | null>;
@@ -96,9 +94,7 @@ function validate(rows: Row[], mapping: Record<string, string>): ValidationIssue
 
   grouped.forEach((entry, journal) => {
     const difference = Math.abs(entry.debit - entry.credit);
-    if (difference > 0.005) {
-      issues.push({ row: entry.row, message: `القيد ${journal} غير متوازن: الفرق ${difference.toFixed(2)}` });
-    }
+    if (difference > 0.005) issues.push({ row: entry.row, message: `القيد ${journal} غير متوازن: الفرق ${difference.toFixed(2)}` });
   });
 
   return issues;
@@ -115,7 +111,6 @@ function normalizeRows(rows: Row[], mapping: Record<string, string>): ImportPayl
       debit: numberValue(row[mapping["مدين"]]),
       credit: numberValue(row[mapping["دائن"]]),
     };
-
     for (const field of optionalFields) {
       if (mapping[field]) payload[field] = String(row[mapping[field]] ?? "").trim() || null;
     }
@@ -185,13 +180,13 @@ export default function DataImportPage() {
     setError("");
 
     try {
-      const workspaceId = window.localStorage.getItem("fpa_workspace_id");
+      const workspaceId = window.sessionStorage.getItem("activeOrganizationId") || window.localStorage.getItem("activeOrganizationId");
       if (!workspaceId) throw new Error("لم يتم تحديد مساحة عمل. افتح مساحة العمل أولًا ثم أعد المحاولة.");
 
       const supabase = getSupabaseBrowserClient();
       const { data: userData, error: userError } = await supabase.auth.getUser();
       if (userError) throw userError;
-      if (!userData.user) throw new Error("الحفظ في قاعدة البيانات يتطلب تسجيل الدخول. التحقق المحلي يعمل بدون تسجيل دخول.");
+      if (!userData.user) throw new Error("الحفظ في قاعدة البيانات يتطلب تسجيل الدخول.");
 
       const payload = normalizeRows(rows, mapping);
       const fileHash = await sha256(file);
@@ -222,59 +217,54 @@ export default function DataImportPage() {
     worksheet["!freeze"] = { xSplit: 0, ySplit: 1 };
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, "القيود اليومية");
-    XLSX.utils.book_append_sheet(workbook, XLSX.utils.aoa_to_sheet([
-      ["تعليمات"],
-      ["التاريخ يجب أن يكون بصيغة YYYY-MM-DD"],
-      ["يجب أن يتوازن كل رقم قيد: إجمالي المدين = إجمالي الدائن"],
-      ["كل سطر يحتوي مدين أو دائن فقط وليس الاثنين معًا"],
-      ["كود الحساب واسم الحساب مطلوبان في كل سطر"],
-      ["الأبعاد التحليلية اختيارية ويمكن تركها فارغة"],
-    ]), "تعليمات");
+    XLSX.utils.book_append_sheet(workbook, XLSX.utils.aoa_to_sheet([["تعليمات"], ["التاريخ يجب أن يكون بصيغة YYYY-MM-DD"], ["يجب أن يتوازن كل رقم قيد: إجمالي المدين = إجمالي الدائن"], ["كل سطر يحتوي مدين أو دائن فقط وليس الاثنين معًا"], ["كود الحساب واسم الحساب مطلوبان في كل سطر"], ["الأبعاد التحليلية اختيارية ويمكن تركها فارغة"]]), "تعليمات");
     XLSX.writeFile(workbook, "FPA-journal-template.xlsx");
   }
 
   return (
-    <main className="min-h-screen bg-[#f7f8fa] text-[#172033]">
+    <main className="min-h-screen bg-[#f7f8fa] text-[#172033]" dir="rtl">
       <header className="border-b border-slate-200 bg-white">
-        <div className="mx-auto flex max-w-[1500px] items-center justify-between px-6 py-5 lg:px-10">
-          <a href="/workspace" className="text-sm font-semibold text-slate-500 hover:text-slate-950">العودة لمساحة العمل</a>
-          <div className="text-right"><p className="text-xs font-bold tracking-[0.14em] text-slate-400">DATA IMPORT</p><h1 className="mt-1 font-bold text-slate-950">البيانات والاستيراد</h1></div>
+        <div className="mx-auto flex w-full max-w-[1500px] items-center justify-between gap-4 px-4 py-4 sm:px-6 lg:px-8">
+          <a href="/workspace" className="shrink-0 text-xs font-semibold text-slate-500 hover:text-slate-950 sm:text-sm">العودة لمساحة العمل</a>
+          <div className="min-w-0 text-right"><p className="text-[10px] font-bold tracking-[0.14em] text-slate-400 sm:text-xs">DATA & IMPORTS</p><h1 className="mt-1 truncate text-base font-bold text-slate-950 sm:text-lg">الاستيراد والتحقق</h1></div>
         </div>
       </header>
 
-      <section className="mx-auto max-w-[1500px] px-6 py-10 lg:px-10">
-        <div className="flex flex-col justify-between gap-5 border-b border-slate-200 pb-8 md:flex-row md:items-end">
-          <div>
-            <p className="text-sm font-bold text-slate-400">المرحلة الأولى</p>
-            <h2 className="mt-2 text-3xl font-bold tracking-tight text-slate-950">استيراد البيانات المالية</h2>
-            <p className="mt-3 max-w-3xl leading-7 text-slate-500">ارفع ملف Excel أو CSV. النظام يتحقق محليًا ثم يعيد التحقق داخل قاعدة البيانات قبل حفظ عملية الاستيراد وصفوفها.</p>
+      <section className="mx-auto w-full max-w-[1500px] px-4 py-7 sm:px-6 sm:py-9 lg:px-8 lg:py-10">
+        <div className="border-b border-slate-200 pb-7 sm:pb-8">
+          <div className="flex flex-col gap-5 xl:flex-row xl:items-end xl:justify-between">
+            <div className="min-w-0">
+              <p className="text-xs font-bold text-slate-400 sm:text-sm">دورة البيانات</p>
+              <h2 className="mt-2 text-2xl font-bold tracking-tight text-slate-950 sm:text-3xl lg:text-4xl">استيراد البيانات المالية</h2>
+              <p className="mt-3 max-w-3xl text-sm leading-7 text-slate-500 sm:text-base sm:leading-8">ارفع ملف Excel أو CSV. النظام يتحقق محليًا ثم يعيد التحقق داخل قاعدة البيانات قبل حفظ عملية الاستيراد وصفوفها.</p>
+            </div>
+            <button type="button" onClick={downloadTemplate} className="inline-flex min-h-11 w-full shrink-0 items-center justify-center rounded-xl border border-slate-300 bg-white px-5 py-3 text-sm font-bold text-slate-900 hover:bg-slate-50 sm:w-auto">تنزيل قالب Excel</button>
           </div>
-          <button type="button" onClick={downloadTemplate} className="rounded-xl border border-slate-300 bg-white px-5 py-3 text-sm font-bold text-slate-900 hover:bg-slate-50">تنزيل قالب Excel</button>
         </div>
 
-        <div className="mt-8 grid gap-6 lg:grid-cols-[0.7fr_1.3fr]">
-          <section className="rounded-3xl border border-slate-200 bg-white p-7 shadow-sm">
+        <div className="mt-7 grid gap-5 lg:grid-cols-[minmax(300px,0.72fr)_minmax(0,1.28fr)] lg:gap-6">
+          <section className="min-w-0 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6 lg:p-7">
             <p className="text-sm font-bold text-slate-900">1. ارفع الملف</p>
-            <label className="mt-5 flex min-h-52 cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed border-slate-300 bg-slate-50 p-6 text-center hover:border-slate-500">
+            <label className="mt-5 flex min-h-48 cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed border-slate-300 bg-slate-50 p-5 text-center transition hover:border-slate-500 sm:min-h-52 sm:p-6">
               <input type="file" accept=".xlsx,.xls,.csv" onChange={handleFile} className="hidden" />
-              <span className="text-lg font-bold text-slate-900">اختر ملف Excel أو CSV</span>
-              <span className="mt-2 text-sm text-slate-500">الحد الأقصى 20MB في هذه المرحلة</span>
-              {fileName && <span className="mt-5 rounded-lg bg-white px-3 py-2 text-xs font-semibold text-slate-700">{fileName}</span>}
+              <span className="text-base font-bold text-slate-900 sm:text-lg">اختر ملف Excel أو CSV</span>
+              <span className="mt-2 text-xs leading-6 text-slate-500 sm:text-sm">الحد الأقصى 20MB في هذه المرحلة</span>
+              {fileName && <span className="mt-5 max-w-full truncate rounded-lg bg-white px-3 py-2 text-xs font-semibold text-slate-700">{fileName}</span>}
             </label>
             {status === "reading" && <p className="mt-4 text-sm font-semibold text-slate-500">جاري قراءة الملف والتحقق منه...</p>}
             {status === "saving" && <p className="mt-4 text-sm font-semibold text-slate-500">جاري حفظ عملية الاستيراد والتحقق منها داخل قاعدة البيانات...</p>}
             {error && <p className="mt-4 rounded-xl bg-red-50 p-4 text-sm font-semibold leading-6 text-red-700">{error}</p>}
             {status === "saved" && <div className="mt-4 rounded-xl bg-emerald-50 p-4 text-sm font-semibold leading-6 text-emerald-800">تم حفظ الاستيراد بنجاح. رقم العملية: {savedImportId}</div>}
-            <div className="mt-6 rounded-2xl bg-slate-50 p-5 text-sm leading-7 text-slate-600">
+            <div className="mt-6 rounded-2xl bg-slate-50 p-4 text-sm leading-7 text-slate-600 sm:p-5">
               <p className="font-bold text-slate-900">قواعد الاستيراد</p>
               <ul className="mt-3 list-disc space-y-1 pr-5"><li>كل قيد يجب أن يكون متوازنًا</li><li>لا يوجد مدين ودائن في السطر نفسه</li><li>لا نقبل قيمًا سالبة</li><li>كود واسم الحساب مطلوبان</li><li>الأبعاد التحليلية اختيارية</li></ul>
             </div>
           </section>
 
-          <section className="rounded-3xl border border-slate-200 bg-white p-7 shadow-sm">
-            <div className="flex items-center justify-between gap-4">
-              <div><p className="text-sm font-bold text-slate-900">2. نتيجة التحقق</p><p className="mt-1 text-sm text-slate-500">لا يتم نشر أي Financial Facts من هذه الشاشة.</p></div>
-              {status === "validated" && <span className={`rounded-full px-3 py-1 text-xs font-bold ${canSave ? "bg-emerald-50 text-emerald-700" : "bg-red-50 text-red-700"}`}>{canSave ? "صالح للحفظ" : "يحتاج تصحيح"}</span>}
+          <section className="min-w-0 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6 lg:p-7">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div><p className="text-sm font-bold text-slate-900">2. نتيجة التحقق</p><p className="mt-1 text-xs leading-6 text-slate-500 sm:text-sm">لا يتم نشر أي Financial Facts من هذه الشاشة.</p></div>
+              {status === "validated" && <span className={`self-start rounded-full px-3 py-1 text-xs font-bold sm:self-auto ${canSave ? "bg-emerald-50 text-emerald-700" : "bg-red-50 text-red-700"}`}>{canSave ? "صالح للحفظ" : "يحتاج تصحيح"}</span>}
             </div>
 
             {status === "validated" || status === "saving" || status === "saved" ? (
@@ -285,14 +275,14 @@ export default function DataImportPage() {
                   <div className="rounded-2xl bg-slate-50 p-4"><p className="text-xs text-slate-500">أعمدة مطلوبة مفقودة</p><p className="mt-2 text-2xl font-bold">{missing.length}</p></div>
                 </div>
 
-                {missing.length > 0 && <div className="mt-5 rounded-2xl bg-red-50 p-5 text-sm text-red-800"><p className="font-bold">الأعمدة المطلوبة غير موجودة</p><p className="mt-2">{missing.join("، ")}</p></div>}
-                {issues.length > 0 && <div className="mt-5 max-h-64 overflow-auto rounded-2xl border border-red-100 bg-red-50 p-5"><p className="font-bold text-red-800">الأخطاء المكتشفة</p><div className="mt-3 space-y-2 text-sm text-red-700">{issues.slice(0, 100).map((issue, index) => <p key={`${issue.row}-${index}`}>السطر {issue.row}: {issue.message}</p>)}</div>{issues.length > 100 && <p className="mt-3 text-xs font-semibold">تم عرض أول 100 خطأ فقط.</p>}</div>}
+                {missing.length > 0 && <div className="mt-5 rounded-2xl bg-red-50 p-4 text-sm text-red-800 sm:p-5"><p className="font-bold">الأعمدة المطلوبة غير موجودة</p><p className="mt-2 break-words">{missing.join("، ")}</p></div>}
+                {issues.length > 0 && <div className="mt-5 max-h-64 overflow-auto rounded-2xl border border-red-100 bg-red-50 p-4 sm:p-5"><p className="font-bold text-red-800">الأخطاء المكتشفة</p><div className="mt-3 space-y-2 text-sm text-red-700">{issues.slice(0, 100).map((issue, index) => <p key={`${issue.row}-${index}`}>السطر {issue.row}: {issue.message}</p>)}</div>{issues.length > 100 && <p className="mt-3 text-xs font-semibold">تم عرض أول 100 خطأ فقط.</p>}</div>}
 
-                {canSave && status === "validated" && <button type="button" onClick={saveImport} className="mt-6 w-full rounded-xl bg-slate-950 px-6 py-4 text-sm font-bold text-white transition hover:bg-slate-800">حفظ الاستيراد في قاعدة البيانات</button>}
-                {status === "saved" && <div className="mt-6 rounded-xl border border-emerald-200 bg-emerald-50 p-5 text-sm font-semibold leading-7 text-emerald-800">تم حفظ Import و Import Rows فقط. لن تظهر البيانات في التقارير أو Actuals حتى تمر بالمطابقة ثم النشر.</div>}
+                {canSave && status === "validated" && <button type="button" onClick={saveImport} className="mt-6 min-h-11 w-full rounded-xl bg-slate-950 px-6 py-3.5 text-sm font-bold text-white transition hover:bg-slate-800">حفظ الاستيراد في قاعدة البيانات</button>}
+                {status === "saved" && <div className="mt-6 rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm font-semibold leading-7 text-emerald-800 sm:p-5">تم حفظ Import و Import Rows فقط. لن تظهر البيانات في التقارير أو Actuals حتى تمر بالمطابقة ثم النشر.</div>}
               </>
             ) : (
-              <div className="mt-10 rounded-2xl border border-dashed border-slate-200 bg-slate-50 p-10 text-center text-sm leading-7 text-slate-500">ارفع ملفًا لبدء التحقق.</div>
+              <div className="mt-10 rounded-2xl border border-dashed border-slate-200 bg-slate-50 p-8 text-center text-sm leading-7 text-slate-500 sm:p-10">ارفع ملفًا لبدء التحقق.</div>
             )}
           </section>
         </div>
