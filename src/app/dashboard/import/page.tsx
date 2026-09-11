@@ -269,12 +269,23 @@ export default function ActualsImportPage() {
           <span className={`step ${stage >= 4 ? "active" : ""}`}>4 <b>النشر</b></span>
         </div>
 
+        <section className="validation-section">
+          <div className="section-title">
+            <div><h2>طرق إدخال البيانات</h2><p>اختر المسار المناسب ثم مرر البيانات عبر نفس محرك التحقق والمطابقة</p></div>
+          </div>
+          <div className="mapping-grid">
+            <div className="value-map-block"><div className="value-map-title"><strong>قوالب القائد</strong></div><p>نزّل قالب القيود اليومية أو شجرة الحسابات، أدخل بياناتك، ثم ارفع الملف.</p><a className="primary-action" href="/dashboard/import/templates">فتح القوالب</a></div>
+            <div className="value-map-block"><div className="value-map-title"><strong>إدخال يدوي</strong></div><p>إدخال مضبوط باستخدام القيم المرجعية بدل الكتابة الحرة.</p><a className="primary-action" href="/dashboard/import/manual">فتح الإدخال اليدوي</a></div>
+          </div>
+          <div className="mapping-note"><strong>تكاملات الأنظمة</strong><span>الربط مع الأنظمة المحاسبية سيستخدم نفس النموذج المالي الموحد ولن يتجاوز التحقق والمطابقة.</span></div>
+        </section>
+
         <div className="upload-box">
           <div className="upload-icon">↑</div>
           <h2>ارفع ملف البيانات الفعلية</h2>
           <p>لن نُسقط البيانات مباشرة. كل عمود وكل قيمة مرجعية تمر بالمراجعة قبل اعتمادها.</p>
           <label className="upload-button">اختيار ملف CSV<input type="file" accept=".csv,text/csv" onChange={handleFile} /></label>
-          <small>CSV UTF-8 — Excel سيُضاف بعد اكتمال نفس قواعد التحقق والمطابقة</small>
+          <small>CSV UTF-8 — البيانات تمر بنفس قواعد التحقق والمطابقة قبل النشر</small>
         </div>
 
         {fileName && <div className="file-row"><strong>{fileName}</strong><span>{rows.length} صف</span></div>}
