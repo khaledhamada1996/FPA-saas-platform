@@ -1,8 +1,11 @@
 "use client";
 
-import { ChangeEvent, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
+import type { ChangeEvent } from "react";
 import * as XLSX from "xlsx";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
+
+// Deployment source marker: current main branch contains the validated import status fix.
 
 type Row = Record<string, unknown>;
 type ValidationIssue = { row: number; message: string };
