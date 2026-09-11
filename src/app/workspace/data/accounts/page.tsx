@@ -47,10 +47,6 @@ export default function AccountsMappingPage() {
     setSaved(false);
   }
 
-  function clearMapping(index: number) {
-    setAccounts((current) => current.map((account) => account.sourceCode === index.toString() ? account : account));
-  }
-
   function setMapping(sourceCode: string, value: string) {
     const target = targetAccounts.find((item) => item.code === value);
     setAccounts((current) => current.map((account) => account.sourceCode === sourceCode
@@ -77,11 +73,13 @@ export default function AccountsMappingPage() {
           </div>
           <div className="flex gap-3">
             <button type="button" onClick={autoMap} className="rounded-xl border border-slate-300 bg-white px-5 py-3 text-sm font-bold text-slate-900 hover:bg-slate-50">مطابقة تلقائية بالكود</button>
-            <button type="button" onClick={() => setSaved(true)} disabled={mappedCount !== accounts.length} className="rounded-xl bg-slate-950 px-5 py-3 text-sm font-bold text-white disabled:cursor-not-allowed disabled:opacity-40">حفظ المطابقة</button>
+            <button type="button" onClick={() => setSaved(true)} disabled={mappedCount !== accounts.length} className="rounded-xl bg-slate-950 px-5 py-3 text-sm font-bold text-white disabled:cursor-not-allowed disabled:opacity-40">اعتماد المطابقة</button>
           </div>
         </div>
 
-        <div className="mt-8 grid gap-5 md:grid-cols-3">
+        <div className="mt-8 rounded-2xl border border-blue-200 bg-blue-50 p-5 text-sm leading-7 text-blue-900">واجهة المطابقة الحالية هي طبقة مراجعة قبل الربط الفعلي بمصدر البيانات. لا يتم إنشاء Financial Facts من هذه المعاينة ولا يتم اعتبار أرقامها بيانات مالية فعلية.</div>
+
+        <div className="mt-6 grid gap-5 md:grid-cols-3">
           <div className="rounded-2xl border border-slate-200 bg-white p-5"><p className="text-xs text-slate-500">حسابات المصدر</p><p className="mt-2 text-3xl font-bold">{accounts.length}</p></div>
           <div className="rounded-2xl border border-slate-200 bg-white p-5"><p className="text-xs text-slate-500">تمت مطابقتها</p><p className="mt-2 text-3xl font-bold">{mappedCount}</p></div>
           <div className="rounded-2xl border border-slate-200 bg-white p-5"><p className="text-xs text-slate-500">تحتاج مراجعة</p><p className="mt-2 text-3xl font-bold text-amber-700">{accounts.length - mappedCount}</p></div>
@@ -114,7 +112,7 @@ export default function AccountsMappingPage() {
           </div>
         </section>
 
-        {saved && <div className="mt-5 rounded-2xl border border-emerald-200 bg-emerald-50 p-5 text-sm font-semibold text-emerald-800">تمت مراجعة المطابقة محليًا. لن يتم نشر البيانات المالية حتى تكتمل طبقة الحفظ الآمن والتحقق النهائي.</div>}
+        {saved && <div className="mt-5 rounded-2xl border border-emerald-200 bg-emerald-50 p-5 text-sm font-semibold text-emerald-800">اكتملت مراجعة المطابقة في الواجهة. الاعتماد الدائم والنشر المالي سيُفعّلان بعد ربط هذه الشاشة بمصدر الاستيراد الحقيقي.</div>}
       </section>
     </main>
   );
