@@ -10,7 +10,6 @@ const monthNames = ["يناير", "فبراير", "مارس", "أبريل", "م�
 function formatPeriod(start: string) { const [year, month] = start.split("-"); return `${monthNames[Number(month) - 1]} ${year}`; }
 
 export default function FinancialSetupPage() {
-  const supabase = createClient();
   const [organizations, setOrganizations] = useState<Organization[]>([]);
   const [organizationId, setOrganizationId] = useState("");
   const [fiscalYear, setFiscalYear] = useState(new Date().getFullYear());
@@ -22,12 +21,14 @@ export default function FinancialSetupPage() {
 
   async function loadOrganizations() {
     setLoading(true); setError("");
+    const supabase = createClient();
     const { data, error: queryError } = await supabase.from("organizations").select("id,name,base_currency,fiscal_year_start_month").order("created_at", { ascending: true });
     if (queryError) { setError("تعذر تحميل مساحات العمل. يجب تسجيل الدخول بحساب لديه صلاحية على مساحة العمل."); setLoading(false); return; }
     setOrganizations(data ?? []); if (!organizationId && data?.[0]?.id) setOrganizationId(data[0].id); setLoading(false);
   }
   async function loadPeriods(orgId: string, year: number) {
     if (!orgId) return;
+    const supabase = createClient();
     const { data, error: queryError } = await supabase.from("financial_periods").select("id,period_start,period_end,status").eq("organization_id", orgId).gte("period_start", `${year}-01-01`).lt("period_start", `${year + 2}-01-01`).order("period_start");
     if (!queryError) setPeriods(data ?? []);
   }
@@ -35,6 +36,7 @@ export default function FinancialSetupPage() {
   useEffect(() => { void loadPeriods(organizationId, fiscalYear); }, [organizationId, fiscalYear]);
   async function createPeriods() {
     if (!organizationId) return; setCreating(true); setMessage(""); setError("");
+    const supabase = createClient();
     const { data, error: rpcError } = await supabase.rpc("create_monthly_financial_periods", { target_organization_id: organizationId, fiscal_year: fiscalYear });
     if (rpcError) { setError(rpcError.message || "تعذر إنشاء الفترات المالية"); setCreating(false); return; }
     setMessage(`تم إنشاء ${data ?? 0} فترة مالية جديدة للسنة المالية ${fiscalYear}`); await loadPeriods(organizationId, fiscalYear); setCreating(false);
