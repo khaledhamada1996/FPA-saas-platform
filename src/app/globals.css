@@ -27,9 +27,11 @@ body {
   overflow-x: hidden;
   background: #f7f8fa;
   color: #172033;
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: Tahoma, Arial, sans-serif;
   font-size: clamp(15px, 0.18vw + 14px, 17px);
-  line-height: 1.6;
+  line-height: 1.7;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
 }
 
 main,
@@ -66,12 +68,48 @@ a {
   -webkit-tap-highlight-color: transparent;
 }
 
+button:disabled {
+  cursor: not-allowed;
+}
+
 a {
   overflow-wrap: anywhere;
 }
 
-/* Fluid container helpers: the layout scales continuously between phones,
-   laptops, 24/28/32-inch monitors and ultrawide screens. */
+.input {
+  display: block;
+  width: 100%;
+  min-height: 48px;
+  border: 1px solid #cbd5e1;
+  border-radius: 10px;
+  background: #fff;
+  padding: 0.7rem 0.85rem;
+  color: #172033;
+  font-size: 0.95rem;
+  line-height: 1.5;
+  outline: none;
+  transition: border-color 160ms ease, box-shadow 160ms ease, background-color 160ms ease;
+}
+
+.input::placeholder {
+  color: #94a3b8;
+}
+
+.input:hover {
+  border-color: #94a3b8;
+}
+
+.input:focus {
+  border-color: #334155;
+  box-shadow: 0 0 0 3px rgba(51, 65, 85, 0.10);
+}
+
+textarea.input {
+  min-height: 120px;
+  padding-block: 0.8rem;
+}
+
+/* Fluid containers: adapt to viewport width rather than physical monitor size. */
 .container-fluid {
   width: min(calc(100% - (var(--page-gutter) * 2)), var(--content-max));
   margin-inline: auto;
@@ -94,6 +132,11 @@ a {
 
   .page-gutter {
     padding-inline: 1rem;
+  }
+
+  .input {
+    min-height: 46px;
+    font-size: 16px;
   }
 }
 
