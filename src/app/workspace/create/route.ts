@@ -15,15 +15,15 @@ export async function POST(request: Request) {
     return NextResponse.redirect(new URL("/workspace?error=invalid_workspace", request.url), 303);
   }
 
-  const { error } = await supabase.rpc("create_workspace", {
+  const { data: workspaceId, error } = await supabase.rpc("create_workspace", {
     p_name: name,
     p_base_currency: currency,
     p_fiscal_year_start_month: fiscalYearStartMonth,
   });
 
-  if (error) {
+  if (error || !workspaceId) {
     return NextResponse.redirect(new URL("/workspace?error=workspace_creation_failed", request.url), 303);
   }
 
-  return NextResponse.redirect(new URL("/dashboard", request.url), 303);
+  return NextResponse.redirect(new URL(`/workspace?created=${workspaceId}`, request.url), 303);
 }
