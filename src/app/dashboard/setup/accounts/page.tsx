@@ -3,8 +3,6 @@
 import { FormEvent, useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 
-const supabase = createClient();
-
 export default function AccountsSetupPage() {
   const [orgId, setOrgId] = useState<string | null>(null);
   const [accounts, setAccounts] = useState<Array<{ id: string; code: string; name: string; normal_balance: string }>>([]);
@@ -16,6 +14,7 @@ export default function AccountsSetupPage() {
 
   useEffect(() => {
     const load = async () => {
+      const supabase = createClient();
       const { data: memberships } = await supabase
         .from("organization_members")
         .select("organization_id")
@@ -41,6 +40,7 @@ export default function AccountsSetupPage() {
       return;
     }
     setLoading(true);
+    const supabase = createClient();
     const { data, error } = await supabase
       .from("accounts")
       .insert({ organization_id: orgId, code: code.trim(), name: name.trim(), normal_balance: balance })
