@@ -1,6 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 
 const modules = [
   { title: "البيانات الفعلية", text: "إضافة واستيراد البيانات بعد التحقق والمطابقة." },
@@ -22,33 +24,120 @@ const navigation = [
   ["data", "البيانات والاستيراد"],
 ] as const;
 
+type AuthState = "loading" | "authenticated" | "unauthenticated";
+
 export default function WorkspacePage() {
+  const router = useRouter();
   const [active, setActive] = useState("overview");
+  const [authState, setAuthState] = useState<AuthState>("loading");
+
+  useEffect(() => {
+    const supabase = getSupabaseBrowserClient();
+    let activeEffect = true;
+
+    void supabase.auth.getUser().then(({ data }) => {
+      if (!activeEffect) return;
+      if (data.user) {
+        setAuthState("authenticated");
+      } else {
+        setAuthState("unauthenticated");
+        router.replace("/login?next=/workspace");
+      }
+    });
+
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (!activeEffect) return;
+      if (session?.user) {
+        setAuthState("authenticated");
+      } else {
+        setAuthState("unauthenticated");
+        router.replace("/login?next=/workspace");
+      }
+    });
+
+    return () => {
+      activeEffect = false;
+      listener.subscription.unsubscribe();
+    };
+  }, [router]);
+
+  if (authState !== "authenticated") {
+    return (
+      <main className="min-h-screen bg-[#f7f8fa] text-[#172033]" dir="rtl">
+        <div className="mx-auto flex min-h-screen w-full max-w-3xl items-center justify-center px-4 py-10 sm:px-6">
+          <div className="w-full rounded-2xl border border-slate-200 bg-white p-7 text-center shadow-sm sm:p-10">
+            <p className="text-xs font-bold tracking-[0.16em] text-slate-400">FP&A WORKSPACE</p>
+            <p className="mt-4 text-base font-semibold text-slate-800">
+              {authState === "loading" ? "جارٍ التحقق من تسجيل الدخول…" : "جارٍ تحويلك إلى تسجيل الدخول…"}
+            </p>
+          </div>
+        </div>
+      </main>
+    );
+  }
 
   return (
-    <main className="min-h-screen bg-[#f7f8fa] text-[#172033]">
+    <main className="min-h-screen bg-[#f7f8fa] text-[#172033]" dir="rtl">
       <header className="border-b border-slate-200 bg-white">
-        <div className="mx-auto flex max-w-[1500px] items-center justify-between px-6 py-4 lg:px-8">
-          <div><p className="text-xs font-bold tracking-[0.14em] text-slate-400">FP&A WORKSPACE</p><h1 className="mt-1 font-bold text-slate-950">مساحة العمل المالي</h1></div>
-          <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-semibold text-slate-600">شركة جديدة</div>
+        <div className="mx-auto flex w-full max-w-[1500px] items-center justify-between gap-4 px-4 py-4 sm:px-6 lg:px-8">
+          <div className="min-w-0">
+            <p className="text-[11px] font-bold tracking-[0.14em] text-slate-400">FP&A WORKSPACE</p>
+            <h1 className="mt-1 truncate text-base font-bold text-slate-950 sm:text-lg">مساحة العمل المالي</h1>
+          </div>
+          <div className="shrink-0 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-600 sm:px-4 sm:text-sm">شركة جديدة</div>
         </div>
       </header>
-      <div className="mx-auto grid max-w-[1500px] lg:grid-cols-[230px_1fr]">
-        <aside className="border-l border-slate-200 bg-white p-5 lg:min-h-[calc(100vh-73px)]">
-          <nav className="space-y-1">
-            {navigation.map(([id, label]) => <button key={id} type="button" onClick={() => setActive(id)} className={`w-full rounded-xl px-4 py-3 text-right text-sm font-semibold transition ${active === id ? "bg-slate-950 text-white" : "text-slate-600 hover:bg-slate-50"}`}>{label}</button>)}
+
+      <div className="mx-auto w-full max-w-[1500px] lg:grid lg:grid-cols-[240px_minmax(0,1fr)]">
+        <aside className="border-b border-slate-200 bg-white lg:border-b-0 lg:border-l lg:p-5">
+          <nav className="flex gap-2 overflow-x-auto px-4 py-3 lg:block lg:space-y-1 lg:px-0 lg:py-0" aria-label="التنقل الرئيسي">
+            {navigation.map(([id, label]) => (
+              <button key={id} type="button" onClick={() => setActive(id)} className={`shrink-0 whitespace-nowrap rounded-lg px-3 py-2.5 text-right text-sm font-semibold transition lg:w-full ${active === id ? "bg-slate-950 text-white" : "text-slate-600 hover:bg-slate-50 hover:text-slate-950"}`}>
+                {label}
+              </button>
+            ))}
           </nav>
-          <div className="mt-10 border-t border-slate-100 pt-6"><p className="text-xs leading-6 text-slate-400">تسجيل الدخول والصلاحيات ستضاف في المرحلة النهائية.</p></div>
+          <div className="hidden border-t border-slate-100 pt-6 lg:mt-10 lg:block">
+            <p className="text-xs leading-6 text-slate-400">الاستيراد والمطابقة منفصلان عن إعداد المؤسسة، ويُفتحان من قائمة مساحة العمل.</p>
+          </div>
         </aside>
-        <section className="p-6 lg:p-10">
+
+        <section className="min-w-0 p-4 sm:p-6 lg:p-10">
           {active === "overview" ? <>
-            <div className="flex flex-col justify-between gap-5 border-b border-slate-200 pb-8 sm:flex-row sm:items-end"><div><p className="text-sm font-bold text-slate-400">OVERVIEW</p><h2 className="mt-2 text-3xl font-bold tracking-tight text-slate-950">لنبدأ ببناء النموذج المالي</h2><p className="mt-3 max-w-2xl leading-7 text-slate-500">لا توجد بيانات مالية منشورة بعد. ابدأ بإضافة البيانات والتحقق منها قبل ظهور أي مؤشرات.</p></div><a href="/workspace/data" className="rounded-xl bg-slate-950 px-6 py-4 text-center text-sm font-bold text-white hover:bg-slate-800">إضافة البيانات</a></div>
-            <div className="mt-8 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">{modules.map((module) => <article key={module.title} className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm"><h3 className="font-bold text-slate-950">{module.title}</h3><p className="mt-3 text-sm leading-7 text-slate-500">{module.text}</p><span className="mt-6 inline-block text-xs font-bold text-slate-400">لم يتم الإعداد بعد</span></article>)}</div>
-          </> : active === "actuals" ? <div className="rounded-3xl border border-slate-200 bg-white p-8 shadow-sm lg:p-12"><p className="text-sm font-bold tracking-[0.14em] text-slate-400">ACTUALS</p><h2 className="mt-3 text-3xl font-bold text-slate-950">البيانات الفعلية</h2><p className="mt-4 max-w-2xl leading-8 text-slate-500">النموذج المالي الفعلي يعرض فقط البيانات التي اجتازت التحقق والمطابقة وتم نشرها بنجاح.</p><a href="/workspace/actuals" className="mt-8 inline-flex rounded-xl bg-slate-950 px-6 py-4 text-sm font-bold text-white">فتح البيانات الفعلية</a></div>
-          : active === "data" ? <div className="rounded-3xl border border-slate-200 bg-white p-8 shadow-sm lg:p-12"><p className="text-sm font-bold tracking-[0.14em] text-slate-400">DATA IMPORT</p><h2 className="mt-3 text-3xl font-bold text-slate-950">البيانات والاستيراد</h2><p className="mt-4 max-w-2xl leading-8 text-slate-500">رفع Excel أو CSV والتحقق من بنية القيود قبل الانتقال إلى المطابقة.</p><a href="/workspace/data" className="mt-8 inline-flex rounded-xl bg-slate-950 px-6 py-4 text-sm font-bold text-white">فتح مركز الاستيراد</a></div>
-          : <div className="rounded-3xl border border-slate-200 bg-white p-8 shadow-sm lg:p-12"><p className="text-sm font-bold tracking-[0.14em] text-slate-400">{active.toUpperCase()}</p><h2 className="mt-3 text-3xl font-bold text-slate-950">هذه الوحدة قيد البناء</h2><p className="mt-4 max-w-2xl leading-8 text-slate-500">سيتم بناء هذه الوحدة بعد تثبيت البيانات الفعلية والتحقق منها.</p></div>}
+            <div className="flex flex-col justify-between gap-5 border-b border-slate-200 pb-7 sm:pb-8 md:flex-row md:items-end">
+              <div>
+                <p className="text-xs font-bold tracking-[0.14em] text-slate-400">OVERVIEW</p>
+                <h2 className="mt-2 text-2xl font-bold tracking-tight text-slate-950 sm:text-3xl lg:text-4xl">لنبدأ ببناء النموذج المالي</h2>
+                <p className="mt-3 max-w-2xl text-sm leading-7 text-slate-500 sm:text-base sm:leading-8">لا توجد بيانات مالية منشورة بعد. ابدأ من قائمة الوحدات باختيار البيانات والاستيراد، ثم انتقل إلى الوحدات التخطيطية بعد اكتمال البيانات الفعلية.</p>
+              </div>
+              <button type="button" onClick={() => setActive("data")} className="inline-flex w-full shrink-0 items-center justify-center rounded-xl bg-slate-950 px-5 py-3.5 text-sm font-bold text-white hover:bg-slate-800 sm:w-auto">البيانات والاستيراد</button>
+            </div>
+
+            <div className="mt-7 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+              {modules.map((module) => (
+                <article key={module.title} className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
+                  <h3 className="font-bold text-slate-950">{module.title}</h3>
+                  <p className="mt-3 text-sm leading-7 text-slate-500">{module.text}</p>
+                  <span className="mt-5 inline-block text-xs font-bold text-slate-400">قيد البناء وفق خطة المنتج</span>
+                </article>
+              ))}
+            </div>
+          </> : active === "actuals" ? <ModuleState title="البيانات الفعلية" eyebrow="ACTUALS" text="النموذج المالي الفعلي يعرض فقط البيانات التي اجتازت التحقق والمطابقة وتم نشرها بنجاح." href="/workspace/actuals" action="فتح البيانات الفعلية" />
+          : active === "data" ? <ModuleState title="البيانات والاستيراد" eyebrow="DATA IMPORT" text="رفع Excel أو CSV والتحقق من بنية القيود قبل الانتقال إلى المطابقة. هذا هو مركز الاستيراد، وليس خطوة من نموذج تعريف المؤسسة." href="/workspace/data" action="فتح مركز الاستيراد" />
+          : <ModuleState title="هذه الوحدة قيد البناء" eyebrow={active.toUpperCase()} text="سيتم بناء هذه الوحدة بعد تثبيت البيانات الفعلية والتحقق منها، وفق ترتيب التنفيذ المحدد في وثائق المشروع." />}
         </section>
       </div>
     </main>
+  );
+}
+
+function ModuleState({ title, eyebrow, text, href, action }: { title: string; eyebrow: string; text: string; href?: string; action?: string }) {
+  return (
+    <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8 lg:p-12">
+      <p className="text-xs font-bold tracking-[0.14em] text-slate-400">{eyebrow}</p>
+      <h2 className="mt-3 text-2xl font-bold text-slate-950 sm:text-3xl">{title}</h2>
+      <p className="mt-4 max-w-2xl text-sm leading-7 text-slate-500 sm:text-base sm:leading-8">{text}</p>
+      {href && action && <a href={href} className="mt-7 inline-flex w-full items-center justify-center rounded-xl bg-slate-950 px-6 py-3.5 text-sm font-bold text-white sm:w-auto">{action}</a>}
+    </div>
   );
 }
