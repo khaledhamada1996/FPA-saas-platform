@@ -1,26 +1,24 @@
 "use client";
 
 import { useEffect } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 
 export default function AuthCallbackPage() {
   const router = useRouter();
-  const searchParams = useSearchParams();
 
   useEffect(() => {
     let active = true;
 
     async function completeEmailConfirmation() {
-      const next = searchParams.get("next") || "/start";
       try {
         const supabase = getSupabaseBrowserClient();
         const { data, error } = await supabase.auth.getSession();
         if (error) throw error;
-
         if (!active) return;
+
         if (data.session) {
-          router.replace(next.startsWith("/") ? next : "/start");
+          router.replace("/start");
         } else {
           router.replace("/login?confirmed=1");
         }
@@ -33,7 +31,14 @@ export default function AuthCallbackPage() {
     return () => {
       active = false;
     };
-  }, [router, searchParams]);
+  }, [router]);
 
-  return <main className="min-h-screen bg-[#f7f8fa] p-8 text-center text-slate-600" dir="rtl">جارٍ تأكيد البريد الإلكتروني…</main>;
+  return (
+    <main className="flex min-h-screen items-center justify-center bg-[#f7f8fa] px-5 text-center text-slate-600" dir="rtl">
+      <div className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-8 shadow-sm">
+        <p className="font-semibold text-slate-900">جارٍ تأكيد البريد الإلكتروني…</p>
+        <p className="mt-2 text-sm">يرجى الانتظار لحظات.</p>
+      </div>
+    </main>
+  );
 }
