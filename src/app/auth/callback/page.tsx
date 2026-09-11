@@ -1,25 +1,39 @@
 "use client";
 
 import { useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 
 export default function AuthCallbackPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
 
   useEffect(() => {
-    async function completeSignIn() {
+    let active = true;
+
+    async function completeEmailConfirmation() {
+      const next = searchParams.get("next") || "/start";
       try {
         const supabase = getSupabaseBrowserClient();
-        const { error } = await supabase.auth.exchangeCodeForSession(window.location.href);
+        const { data, error } = await supabase.auth.getSession();
         if (error) throw error;
-      } finally {
-        router.replace("/start");
+
+        if (!active) return;
+        if (data.session) {
+          router.replace(next.startsWith("/") ? next : "/start");
+        } else {
+          router.replace("/login?confirmed=1");
+        }
+      } catch {
+        if (active) router.replace("/login?error=confirmation");
       }
     }
 
-    void completeSignIn();
-  }, [router]);
+    void completeEmailConfirmation();
+    return () => {
+      active = false;
+    };
+  }, [router, searchParams]);
 
-  return <main className="min-h-screen bg-[#f7f8fa] p-8 text-center text-slate-600" dir="rtl">جارٍ تأكيد تسجيل الدخول…</main>;
+  return <main className="min-h-screen bg-[#f7f8fa] p-8 text-center text-slate-600" dir="rtl">جارٍ تأكيد البريد الإلكتروني…</main>;
 }
