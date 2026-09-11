@@ -11,6 +11,17 @@ const modules = [
   { title: "السيناريوهات", text: "اختبار أثر القرارات والافتراضات قبل اعتمادها." },
 ];
 
+const navigation = [
+  ["overview", "نظرة عامة"],
+  ["actuals", "البيانات الفعلية"],
+  ["budget", "الميزانية"],
+  ["forecast", "التوقعات"],
+  ["variance", "الفروقات"],
+  ["cash", "التدفق النقدي"],
+  ["scenarios", "السيناريوهات"],
+  ["data", "البيانات والاستيراد"],
+] as const;
+
 export default function WorkspacePage() {
   const [active, setActive] = useState("overview");
 
@@ -25,15 +36,17 @@ export default function WorkspacePage() {
       <div className="mx-auto grid max-w-[1500px] lg:grid-cols-[230px_1fr]">
         <aside className="border-l border-slate-200 bg-white p-5 lg:min-h-[calc(100vh-73px)]">
           <nav className="space-y-1">
-            {[['overview','نظرة عامة'],['actuals','البيانات الفعلية'],['budget','الميزانية'],['forecast','التوقعات'],['variance','الفروقات'],['cash','التدفق النقدي'],['scenarios','السيناريوهات'],['data','البيانات والاستيراد']].map(([id,label]) => <button key={id} type="button" onClick={() => setActive(id)} className={`w-full rounded-xl px-4 py-3 text-right text-sm font-semibold transition ${active === id ? 'bg-slate-950 text-white' : 'text-slate-600 hover:bg-slate-50'}`}>{label}</button>)}
+            {navigation.map(([id, label]) => <button key={id} type="button" onClick={() => setActive(id)} className={`w-full rounded-xl px-4 py-3 text-right text-sm font-semibold transition ${active === id ? "bg-slate-950 text-white" : "text-slate-600 hover:bg-slate-50"}`}>{label}</button>)}
           </nav>
           <div className="mt-10 border-t border-slate-100 pt-6"><p className="text-xs leading-6 text-slate-400">تسجيل الدخول والصلاحيات ستضاف في المرحلة النهائية.</p></div>
         </aside>
         <section className="p-6 lg:p-10">
-          {active === 'overview' ? <>
+          {active === "overview" ? <>
             <div className="flex flex-col justify-between gap-5 border-b border-slate-200 pb-8 sm:flex-row sm:items-end"><div><p className="text-sm font-bold text-slate-400">OVERVIEW</p><h2 className="mt-2 text-3xl font-bold tracking-tight text-slate-950">لنبدأ ببناء النموذج المالي</h2><p className="mt-3 max-w-2xl leading-7 text-slate-500">لا توجد بيانات مالية منشورة بعد. ابدأ بإضافة البيانات والتحقق منها قبل ظهور أي مؤشرات.</p></div><a href="/workspace/data" className="rounded-xl bg-slate-950 px-6 py-4 text-center text-sm font-bold text-white hover:bg-slate-800">إضافة البيانات</a></div>
             <div className="mt-8 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">{modules.map((module) => <article key={module.title} className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm"><h3 className="font-bold text-slate-950">{module.title}</h3><p className="mt-3 text-sm leading-7 text-slate-500">{module.text}</p><span className="mt-6 inline-block text-xs font-bold text-slate-400">لم يتم الإعداد بعد</span></article>)}</div>
-          </> : active === 'data' ? <div className="rounded-3xl border border-slate-200 bg-white p-8 shadow-sm lg:p-12"><p className="text-sm font-bold tracking-[0.14em] text-slate-400">DATA IMPORT</p><h2 className="mt-3 text-3xl font-bold text-slate-950">البيانات والاستيراد</h2><p className="mt-4 max-w-2xl leading-8 text-slate-500">رفع Excel أو CSV والتحقق من بنية القيود قبل الانتقال إلى المطابقة.</p><a href="/workspace/data" className="mt-8 inline-flex rounded-xl bg-slate-950 px-6 py-4 text-sm font-bold text-white">فتح مركز الاستيراد</a></div> : <div className="rounded-3xl border border-slate-200 bg-white p-8 shadow-sm lg:p-12"><p className="text-sm font-bold tracking-[0.14em] text-slate-400">{active.toUpperCase()}</p><h2 className="mt-3 text-3xl font-bold text-slate-950">هذه الوحدة قيد البناء</h2><p className="mt-4 max-w-2xl leading-8 text-slate-500">سيتم بناء هذه الوحدة بعد تثبيت البيانات الفعلية والتحقق منها.</p></div>}
+          </> : active === "actuals" ? <div className="rounded-3xl border border-slate-200 bg-white p-8 shadow-sm lg:p-12"><p className="text-sm font-bold tracking-[0.14em] text-slate-400">ACTUALS</p><h2 className="mt-3 text-3xl font-bold text-slate-950">البيانات الفعلية</h2><p className="mt-4 max-w-2xl leading-8 text-slate-500">النموذج المالي الفعلي يعرض فقط البيانات التي اجتازت التحقق والمطابقة وتم نشرها بنجاح.</p><a href="/workspace/actuals" className="mt-8 inline-flex rounded-xl bg-slate-950 px-6 py-4 text-sm font-bold text-white">فتح البيانات الفعلية</a></div>
+          : active === "data" ? <div className="rounded-3xl border border-slate-200 bg-white p-8 shadow-sm lg:p-12"><p className="text-sm font-bold tracking-[0.14em] text-slate-400">DATA IMPORT</p><h2 className="mt-3 text-3xl font-bold text-slate-950">البيانات والاستيراد</h2><p className="mt-4 max-w-2xl leading-8 text-slate-500">رفع Excel أو CSV والتحقق من بنية القيود قبل الانتقال إلى المطابقة.</p><a href="/workspace/data" className="mt-8 inline-flex rounded-xl bg-slate-950 px-6 py-4 text-sm font-bold text-white">فتح مركز الاستيراد</a></div>
+          : <div className="rounded-3xl border border-slate-200 bg-white p-8 shadow-sm lg:p-12"><p className="text-sm font-bold tracking-[0.14em] text-slate-400">{active.toUpperCase()}</p><h2 className="mt-3 text-3xl font-bold text-slate-950">هذه الوحدة قيد البناء</h2><p className="mt-4 max-w-2xl leading-8 text-slate-500">سيتم بناء هذه الوحدة بعد تثبيت البيانات الفعلية والتحقق منها.</p></div>}
         </section>
       </div>
     </main>
