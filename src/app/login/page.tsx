@@ -15,17 +15,12 @@ export default function LoginPage() {
     event.preventDefault();
     setError("");
     setStatus("loading");
-
     try {
       const supabase = getSupabaseBrowserClient();
-      const { error: signInError } = await supabase.auth.signInWithPassword({
-        email: email.trim(),
-        password,
-      });
+      const { error: signInError } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
       if (signInError) throw signInError;
-
       const requestedNext = new URLSearchParams(window.location.search).get("next");
-      const next = requestedNext && requestedNext.startsWith("/") ? requestedNext : "/start";
+      const next = requestedNext && requestedNext.startsWith("/") ? requestedNext : "/workspace";
       router.replace(next);
     } catch (caughtError) {
       setError(caughtError instanceof Error ? caughtError.message : "تعذر تسجيل الدخول.");
