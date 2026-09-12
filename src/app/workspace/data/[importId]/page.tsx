@@ -4,25 +4,25 @@ import { useEffect, useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 
-type ImportInfo={id:string;file_name:string;status:string;row_count:number;imported_row_count:number;error_count:number;warning_count:number;mapping_version:string|null;created_at:string;published_at:string|null};
+type ImportInfo={id:string;file_name:string;status:string;row_count:number;imported_row_count:number;error_count:number;warning_count:number;mapping_version:string|null;organization_id:string;created_at:string;published_at:string|null};
 type Source={source_code:string;source_name:string;row_count:number;mapping_id:string|null;mapping_status:string|null;target_account_id:string|null;target_account_code:string|null;target_account_name:string|null};
 type Account={id:string;code:string;name:string;account_type:string|null;statement_type:string|null;statement_section:string|null};
-type Recon={status:string;difference_minor:number;source_row_count:number;accepted_row_count:number;rejected_row_count;mapping_version:string};
+type Recon={status:string;difference_minor:number;source_row_count:number;accepted_row_count:number;rejected_row_count:number;mapping_version:string};
 type ReviewData={import:ImportInfo;sources:Source[];accounts:Account[];reconciliation:Recon[];audit_events:{id:string;action:string;from_status:string;to_status:string;created_at:string;metadata:Record<string,unknown>}[]};
 
 const statusLabels:Record<string,string>={mapping_required:"تحتاج مطابقة",ready_for_review:"جاهزة للمراجعة",importing:"جاري النشر",imported:"تم الاستيراد",published:"منشورة",rolled_back:"تم التراجع",failed:"فشلت",uploaded:"مرفوعة",validating:"جاري التحقق"};
 
 export default function ImportReviewPage(){
   const {importId}=useParams<{importId:string}>(); const router=useRouter(); const [data,setData]=useState<ReviewData|null>(null); const [loading,setLoading]=useState(true); const [error,setError]=useState(""); const [version,setVersion]=useState("v1"); const [saving,setSaving]=useState(false); const [search,setSearch]=useState(""); const [targets,setTargets]=useState<Record<string,string>>({}); const [rollbackReason,setRollbackReason]=useState("");
-  async function load(){setLoading(true);setError("");try{const supabase=getSupabaseBrowserClient();const {data:result,error}=await supabase.rpc("get_import_review",{p_import_id:importId});if(error)throw error;setData(result as ReviewData);setVersion((result as ReviewData).import.mapping_version||"v1");const initial:Record<string,string>={};for(const s of (result as ReviewData).sources)if(s.target_account_id)initial[s.source_code]=s.target_account_id;setTargets(initial);}catch(e){setError(e instanceof Error?e.message:"تعذر تحميل عملية الاستيراد");}finally{setLoading(false);}}
+  async function load(){setLoading(true);setError("");try{const supabase=getSupabaseBrowserClient();const {data:result,error}=await supabase.rpc("get_import_review",{p_import_id:importId});if(error)throw error;const next=result as ReviewData;setData(next);setVersion(next.import.mapping_version||"v1");const initial:Record<string,string>={};for(const s of next.sources)if(s.target_account_id)initial[s.source_code]=s.target_account_id;setTargets(initial);}catch(e){setError(e instanceof Error?e.message:"تعذر تحميل عملية الاستيراد");}finally{setLoading(false);}}
   useEffect(()=>{void load();},[importId]);
   const filtered=useMemo(()=>data?.sources.filter(s=>`${s.source_code} ${s.source_name}`.toLowerCase().includes(search.toLowerCase()))??[],[data,search]);
-  async function callRpc(fn:string,args:Record<string,unknown>,success:string){setSaving(true);setError("");try{const {error}=await getSupabaseBrowserClient().rpc(fn,args);if(error)throw error;await load();}catch(e){setError(e instanceof Error?e.message:success);}finally{setSaving(false);}}
-  async function saveMapping(source:Source){const target=targets[source.source_code];if(!target){setError("اختر الحساب المالي المستهدف أولًا");return;}await callRpc("upsert_account_mapping",{p_organization_id:data?.import.organization_id,p_mapping_version:version,p_source_code:source.source_code,p_source_name:source.source_name,p_target_account_id:target},"تعذر حفظ المطابقة");}
-  async function prepare(){await callRpc("prepare_import_for_review",{p_import_id:importId,p_mapping_version:version},"تعذر تجهيز الاستيراد للمراجعة");}
-  async function reconcile(){await callRpc("reconcile_import",{p_import_id:importId},"تعذر تنفيذ المطابقة النهائية");}
-  async function publish(){await callRpc("publish_actuals_from_import",{p_import_id:importId,p_mapping_version:version},"تعذر نشر البيانات");}
-  async function rollback(){if(!rollbackReason.trim()){setError("اكتب سبب التراجع قبل التنفيذ");return;}await callRpc("rollback_actuals_import",{p_import_id:importId,p_reason:rollbackReason},"تعذر التراجع عن الاستيراد");setRollbackReason("");}
+  async function callRpc(fn:string,args:Record<string,unknown>){setSaving(true);setError("");try{const {error}=await getSupabaseBrowserClient().rpc(fn,args);if(error)throw error;await load();}catch(e){setError(e instanceof Error?e.message:"تعذر تنفيذ العملية");}finally{setSaving(false);}}
+  async function saveMapping(source:Source){const target=targets[source.source_code];if(!target){setError("اختر الحساب المالي المستهدف أولًا");return;}await callRpc("upsert_account_mapping",{p_organization_id:data?.import.organization_id,p_mapping_version:version,p_source_code:source.source_code,p_source_name:source.source_name,p_target_account_id:target});}
+  async function prepare(){await callRpc("prepare_import_for_review",{p_import_id:importId,p_mapping_version:version});}
+  async function reconcile(){await callRpc("reconcile_import",{p_import_id:importId});}
+  async function publish(){await callRpc("publish_actuals_from_import",{p_import_id:importId,p_mapping_version:version});}
+  async function rollback(){if(!rollbackReason.trim()){setError("اكتب سبب التراجع قبل التنفيذ");return;}await callRpc("rollback_actuals_import",{p_import_id:importId,p_reason:rollbackReason});setRollbackReason("");}
   if(loading)return <main className="min-h-screen bg-[#f7f8fa] p-6 text-[#172033]" dir="rtl"><div className="mx-auto max-w-6xl rounded-2xl border border-slate-200 bg-white p-10 text-center">جاري تحميل مراجعة الاستيراد…</div></main>;
   if(error&&!data)return <main className="min-h-screen bg-[#f7f8fa] p-6 text-[#172033]" dir="rtl"><div className="mx-auto max-w-3xl rounded-2xl border border-red-200 bg-red-50 p-8 text-center text-red-800">{error}<button onClick={()=>router.push("/workspace/data")} className="mt-5 block w-full rounded-xl bg-slate-950 px-5 py-3 text-white">العودة للاستيراد</button></div></main>;
   if(!data)return null;
