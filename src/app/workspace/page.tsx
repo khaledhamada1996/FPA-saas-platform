@@ -61,6 +61,11 @@ export default function WorkspacePage() {
       }
 
       const activeId = window.sessionStorage.getItem("activeOrganizationId");
+      if (list.length > 1 && (!activeId || !list.some((item) => item.id === activeId))) {
+        router.replace("/start");
+        return;
+      }
+
       const selected = list.find((item) => item.id === activeId) ?? list[0];
       if (!activeEffect) return;
       window.sessionStorage.setItem("activeOrganizationId", selected.id);
