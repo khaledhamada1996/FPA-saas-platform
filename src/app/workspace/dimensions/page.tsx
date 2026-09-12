@@ -1,10 +1,9 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { createClient } from '@/lib/supabase/client'
+import { getSupabaseBrowserClient } from '@/lib/supabase/client'
 
 export default function DimensionsPage() {
-  const supabase = createClient()
   const [organizationId, setOrganizationId] = useState('')
   const [periods, setPeriods] = useState<any[]>([])
   const [periodId, setPeriodId] = useState('')
@@ -18,7 +17,7 @@ export default function DimensionsPage() {
     setOrganizationId(id)
     if (!id) { setLoading(false); setError('لم يتم تحديد المؤسسة النشطة'); return }
     ;(async () => {
-      const { data, error } = await supabase.from('financial_periods').select('id,period_start,period_end,status').eq('organization_id', id).order('period_end', { ascending: false })
+      const { data, error } = await getSupabaseBrowserClient().from('financial_periods').select('id,period_start,period_end,status').eq('organization_id', id).order('period_end', { ascending: false })
       if (error) setError(error.message)
       else { setPeriods(data || []); setPeriodId(data?.[0]?.id || '') }
       setLoading(false)
@@ -29,7 +28,7 @@ export default function DimensionsPage() {
     if (!organizationId || !periodId) return
     ;(async () => {
       setLoading(true); setError('')
-      const { data, error } = await supabase.rpc('get_dimension_analysis', { p_organization_id: organizationId, p_period_id: periodId, p_dimension: dimension })
+      const { data, error } = await getSupabaseBrowserClient().rpc('get_dimension_analysis', { p_organization_id: organizationId, p_period_id: periodId, p_dimension: dimension })
       if (error) setError(error.message); else setRows(data?.rows || [])
       setLoading(false)
     })()
