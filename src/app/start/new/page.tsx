@@ -1,21 +1,38 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 
 const months = ["يناير", "فبراير", "مارس", "أبريل", "مايو", "يونيو", "يوليو", "أغسطس", "سبتمبر", "أكتوبر", "نوفمبر", "ديسمبر"];
 
+type ParentCompany = { id: string; name: string; parent_organization_id: string | null };
+
 export default function NewCompanyPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [name, setName] = useState("");
   const [legalName, setLegalName] = useState("");
   const [industry, setIndustry] = useState("");
   const [city, setCity] = useState("");
   const [currency, setCurrency] = useState("SAR");
   const [fiscalMonth, setFiscalMonth] = useState("1");
+  const [parentId, setParentId] = useState<string | null>(null);
+  const [parentCompanies, setParentCompanies] = useState<ParentCompany[]>([]);
+  const [loadingParents, setLoadingParents] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+
+  useEffect(() => {
+    const requestedParent = searchParams.get("parent");
+    const supabase = getSupabaseBrowserClient();
+    void supabase.rpc("get_my_workspaces").then(({ data }) => {
+      const companies = (data ?? []) as ParentCompany[];
+      setParentCompanies(companies);
+      setParentId(requestedParent && companies.some((company) => company.id === requestedParent) ? requestedParent : null);
+      setLoadingParents(false);
+    });
+  }, [searchParams]);
 
   async function createCompany() {
     if (!name.trim()) {
@@ -42,6 +59,7 @@ export default function NewCompanyPage() {
           city: city.trim(),
           country: "السعودية",
         },
+        p_parent_organization_id: parentId,
       });
       if (rpcError) throw rpcError;
       if (!data) throw new Error("تعذر إنشاء الشركة.");
@@ -67,10 +85,20 @@ export default function NewCompanyPage() {
           <div className="mb-8">
             <p className="text-xs font-bold tracking-[0.14em] text-slate-400">COMPANY SETUP</p>
             <h1 className="mt-3 text-3xl font-bold tracking-tight text-slate-950 sm:text-4xl">أنشئ مساحة الشركة</h1>
-            <p className="mt-3 text-sm leading-7 text-slate-500 sm:text-base">هذه الشاشة تظهر فقط عند الضغط على «إضافة شركة». بعد الإنشاء ستدخل مباشرة إلى مساحة الشركة، ويمكنك لاحقًا دعوة الفريق وتحديد صلاحيات كل مستخدم.</p>
+            <p className="mt-3 text-sm leading-7 text-slate-500 sm:text-base">حدد الشركة الأم إذا كانت هذه الشركة تابعة لمجموعة أو شركة أخرى.</p>
           </div>
 
           <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-8">
+            <div className="mb-6 rounded-2xl border border-slate-200 bg-slate-50 p-4">
+              <label className="block"><span className="mb-2 block text-sm font-semibold text-slate-700">الشركة الأم</span>
+                <select className="input" value={parentId ?? ""} onChange={(e) => setParentId(e.target.value || null)} disabled={loadingParents}>
+                  <option value="">شركة مستقلة / شركة أم</option>
+                  {parentCompanies.map((company) => <option key={company.id} value={company.id}>{company.name}</option>)}
+                </select>
+              </label>
+              <p className="mt-2 text-xs leading-5 text-slate-400">اختيار شركة هنا يجعل الشركة الجديدة تظهر تحتها مباشرة في شجرة المجموعة. الصلاحيات النهائية يتحقق منها الخادم.</p>
+            </div>
+
             <div className="grid gap-5 sm:grid-cols-2">
               <Field label="اسم الشركة *"><input className="input" value={name} onChange={(e) => setName(e.target.value)} placeholder="مثال: شركة القائد للتجارة" autoFocus /></Field>
               <Field label="الاسم القانوني"><input className="input" value={legalName} onChange={(e) => setLegalName(e.target.value)} placeholder="إن وجد" /></Field>
@@ -84,9 +112,9 @@ export default function NewCompanyPage() {
 
             <div className="mt-8 border-t border-slate-100 pt-6">
               <button type="button" disabled={saving} onClick={() => void createCompany()} className="w-full rounded-xl bg-slate-950 px-6 py-4 text-sm font-bold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60">
-                {saving ? "جارٍ إنشاء الشركة…" : "إنشاء الشركة والدخول إليها"}
+                {saving ? "جارٍ إنشاء الشركة…" : parentId ? "إنشاء الشركة التابعة والدخول إليها" : "إنشاء الشركة والدخول إليها"}
               </button>
-              <p className="mt-3 text-center text-xs leading-5 text-slate-400">سيتم تسجيلك كمسؤول عن الشركة تلقائيًا، ثم يمكنك إدارة أعضاء الفريق وصلاحياتهم.</p>
+              <p className="mt-3 text-center text-xs leading-5 text-slate-400">سيتم تسجيلك كمسؤول عن الشركة الجديدة، ويمكنك لاحقًا إدارة فريقها وصلاحياته وفق الهيكل التنظيمي.</p>
             </div>
           </section>
         </section>
