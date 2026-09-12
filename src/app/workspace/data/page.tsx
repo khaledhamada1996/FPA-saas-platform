@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import type { ChangeEvent } from "react";
+import { useRouter } from "next/navigation";
 import * as XLSX from "xlsx";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 
@@ -11,282 +12,26 @@ type ImportPayload = Record<string, string | number | null>;
 
 const required = ["التاريخ", "رقم القيد", "وصف القيد", "كود الحساب", "اسم الحساب", "مدين", "دائن"];
 const optionalFields = ["الكيان القانوني", "الفرع", "القسم", "مركز التكلفة", "المنطقة", "المشروع"];
-
 const aliases: Record<string, string[]> = {
-  "التاريخ": ["التاريخ", "date", "Date"],
-  "رقم القيد": ["رقم القيد", "journal_no", "journal number", "Journal No"],
-  "وصف القيد": ["وصف القيد", "الوصف", "description", "Description"],
-  "كود الحساب": ["كود الحساب", "account code", "Account Code"],
-  "اسم الحساب": ["اسم الحساب", "account name", "Account Name"],
-  "مدين": ["مدين", "debit", "Debit"],
-  "دائن": ["دائن", "credit", "Credit"],
-  "الكيان القانوني": ["الكيان القانوني", "legal entity", "legal_entity"],
-  "الفرع": ["الفرع", "branch"],
-  "القسم": ["القسم", "department"],
-  "مركز التكلفة": ["مركز التكلفة", "cost center", "cost_center"],
-  "المنطقة": ["المنطقة", "region"],
-  "المشروع": ["المشروع", "project"],
+  "التاريخ": ["التاريخ", "date", "Date"], "رقم القيد": ["رقم القيد", "journal_no", "journal number", "Journal No"],
+  "وصف القيد": ["وصف القيد", "الوصف", "description", "Description"], "كود الحساب": ["كود الحساب", "account code", "Account Code"],
+  "اسم الحساب": ["اسم الحساب", "account name", "Account Name"], "مدين": ["مدين", "debit", "Debit"], "دائن": ["دائن", "credit", "Credit"],
+  "الكيان القانوني": ["الكيان القانوني", "legal entity", "legal_entity"], "الفرع": ["الفرع", "branch"], "القسم": ["القسم", "department"],
+  "مركز التكلفة": ["مركز التكلفة", "cost center", "cost_center"], "المنطقة": ["المنطقة", "region"], "المشروع": ["المشروع", "project"],
 };
+function normalize(value: unknown): string { return String(value ?? "").trim().toLowerCase().replace(/\s+/g, " "); }
+function numberValue(value: unknown): number { if (typeof value === "number") return Number.isFinite(value) ? value : NaN; const text = String(value ?? "").replace(/,/g, "").replace(/٬/g, "").trim(); if (!text) return 0; const parsed = Number(text); return Number.isFinite(parsed) ? parsed : NaN; }
+function dateValue(value: unknown): string { if (value instanceof Date && !Number.isNaN(value.getTime())) return `${value.getFullYear()}-${String(value.getMonth()+1).padStart(2,"0")}-${String(value.getDate()).padStart(2,"0")}`; const text = String(value ?? "").trim(); return /^\d{4}-\d{2}-\d{2}$/.test(text) ? text : ""; }
+function mapHeaders(headers: string[]): Record<string, string> { const result: Record<string, string> = {}; for (const canonical of [...required, ...optionalFields]) { const match = headers.find((header) => aliases[canonical].some((alias) => normalize(alias) === normalize(header))); if (match) result[canonical] = match; } return result; }
+function validate(rows: Row[], mapping: Record<string, string>): ValidationIssue[] { const issues: ValidationIssue[] = []; const grouped = new Map<string,{debit:number;credit:number;row:number}>(); rows.forEach((row,index)=>{ const line=index+2; const date=dateValue(row[mapping["التاريخ"]]); const journal=String(row[mapping["رقم القيد"]]??"").trim(); const accountCode=String(row[mapping["كود الحساب"]]??"").trim(); const accountName=String(row[mapping["اسم الحساب"]]??"").trim(); const debit=numberValue(row[mapping["مدين"]]); const credit=numberValue(row[mapping["دائن"]]); if(!date) issues.push({row:line,message:"التاريخ غير صالح. استخدم YYYY-MM-DD"}); if(!journal) issues.push({row:line,message:"رقم القيد مفقود"}); if(!accountCode) issues.push({row:line,message:"كود الحساب مفقود"}); if(!accountName) issues.push({row:line,message:"اسم الحساب مفقود"}); if(Number.isNaN(debit)||Number.isNaN(credit)) issues.push({row:line,message:"المدين أو الدائن ليس رقمًا صالحًا"}); if(!Number.isNaN(debit)&&!Number.isNaN(credit)){ if(debit<0||credit<0) issues.push({row:line,message:"لا يسمح بقيمة سالبة في المدين أو الدائن"}); if(debit>0&&credit>0) issues.push({row:line,message:"السطر لا يجوز أن يحتوي مدين ودائن معًا"}); if(debit===0&&credit===0) issues.push({row:line,message:"السطر يجب أن يحتوي قيمة مدين أو دائن"}); if(journal){const current=grouped.get(journal)??{debit:0,credit:0,row:line}; current.debit+=debit; current.credit+=credit; grouped.set(journal,current);}} }); grouped.forEach((entry,journal)=>{const difference=Math.abs(entry.debit-entry.credit); if(difference>0.005) issues.push({row:entry.row,message:`القيد ${journal} غير متوازن: الفرق ${difference.toFixed(2)}`});}); return issues; }
+function normalizeRows(rows: Row[], mapping: Record<string,string>): ImportPayload[] { return rows.map(row=>{const payload:ImportPayload={date:dateValue(row[mapping["التاريخ"]]),journal_no:String(row[mapping["رقم القيد"]]??"").trim(),description:String(row[mapping["وصف القيد"]]??"").trim(),account_code:String(row[mapping["كود الحساب"]]??"").trim(),account_name:String(row[mapping["اسم الحساب"]]??"").trim(),debit:numberValue(row[mapping["مدين"]]),credit:numberValue(row[mapping["دائن"]])}; for(const field of optionalFields) if(mapping[field]) payload[field]=String(row[mapping[field]]??"").trim()||null; return payload;}); }
+async function sha256(file: File): Promise<string> { const digest=await crypto.subtle.digest("SHA-256",await file.arrayBuffer()); return Array.from(new Uint8Array(digest)).map(byte=>byte.toString(16).padStart(2,"0")).join(""); }
 
-function normalize(value: unknown): string {
-  return String(value ?? "").trim().toLowerCase().replace(/\s+/g, " ");
-}
-
-function numberValue(value: unknown): number {
-  if (typeof value === "number") return Number.isFinite(value) ? value : NaN;
-  const text = String(value ?? "").replace(/,/g, "").replace(/٬/g, "").trim();
-  if (!text) return 0;
-  const parsed = Number(text);
-  return Number.isFinite(parsed) ? parsed : NaN;
-}
-
-function dateValue(value: unknown): string {
-  if (value instanceof Date && !Number.isNaN(value.getTime())) {
-    const year = value.getFullYear();
-    const month = String(value.getMonth() + 1).padStart(2, "0");
-    const day = String(value.getDate()).padStart(2, "0");
-    return `${year}-${month}-${day}`;
-  }
-  const text = String(value ?? "").trim();
-  return /^\d{4}-\d{2}-\d{2}$/.test(text) ? text : "";
-}
-
-function mapHeaders(headers: string[]): Record<string, string> {
-  const result: Record<string, string> = {};
-  for (const canonical of [...required, ...optionalFields]) {
-    const match = headers.find((header) => aliases[canonical].some((alias) => normalize(alias) === normalize(header)));
-    if (match) result[canonical] = match;
-  }
-  return result;
-}
-
-function validate(rows: Row[], mapping: Record<string, string>): ValidationIssue[] {
-  const issues: ValidationIssue[] = [];
-  const grouped = new Map<string, { debit: number; credit: number; row: number }>();
-
-  rows.forEach((row, index) => {
-    const line = index + 2;
-    const date = dateValue(row[mapping["التاريخ"]]);
-    const journal = String(row[mapping["رقم القيد"]] ?? "").trim();
-    const accountCode = String(row[mapping["كود الحساب"]] ?? "").trim();
-    const accountName = String(row[mapping["اسم الحساب"]] ?? "").trim();
-    const debit = numberValue(row[mapping["مدين"]]);
-    const credit = numberValue(row[mapping["دائن"]]);
-
-    if (!date) issues.push({ row: line, message: "التاريخ غير صالح. استخدم YYYY-MM-DD" });
-    if (!journal) issues.push({ row: line, message: "رقم القيد مفقود" });
-    if (!accountCode) issues.push({ row: line, message: "كود الحساب مفقود" });
-    if (!accountName) issues.push({ row: line, message: "اسم الحساب مفقود" });
-    if (Number.isNaN(debit) || Number.isNaN(credit)) issues.push({ row: line, message: "المدين أو الدائن ليس رقمًا صالحًا" });
-
-    if (!Number.isNaN(debit) && !Number.isNaN(credit)) {
-      if (debit < 0 || credit < 0) issues.push({ row: line, message: "لا يسمح بقيمة سالبة في المدين أو الدائن" });
-      if (debit > 0 && credit > 0) issues.push({ row: line, message: "السطر لا يجوز أن يحتوي مدين ودائن معًا" });
-      if (debit === 0 && credit === 0) issues.push({ row: line, message: "السطر يجب أن يحتوي قيمة مدين أو دائن" });
-      if (journal) {
-        const current = grouped.get(journal) ?? { debit: 0, credit: 0, row: line };
-        current.debit += debit;
-        current.credit += credit;
-        grouped.set(journal, current);
-      }
-    }
-  });
-
-  grouped.forEach((entry, journal) => {
-    const difference = Math.abs(entry.debit - entry.credit);
-    if (difference > 0.005) issues.push({ row: entry.row, message: `القيد ${journal} غير متوازن: الفرق ${difference.toFixed(2)}` });
-  });
-
-  return issues;
-}
-
-function normalizeRows(rows: Row[], mapping: Record<string, string>): ImportPayload[] {
-  return rows.map((row) => {
-    const payload: ImportPayload = {
-      date: dateValue(row[mapping["التاريخ"]]),
-      journal_no: String(row[mapping["رقم القيد"]] ?? "").trim(),
-      description: String(row[mapping["وصف القيد"]] ?? "").trim(),
-      account_code: String(row[mapping["كود الحساب"]] ?? "").trim(),
-      account_name: String(row[mapping["اسم الحساب"]] ?? "").trim(),
-      debit: numberValue(row[mapping["مدين"]]),
-      credit: numberValue(row[mapping["دائن"]]),
-    };
-    for (const field of optionalFields) {
-      if (mapping[field]) payload[field] = String(row[mapping[field]] ?? "").trim() || null;
-    }
-    return payload;
-  });
-}
-
-async function sha256(file: File): Promise<string> {
-  const digest = await crypto.subtle.digest("SHA-256", await file.arrayBuffer());
-  return Array.from(new Uint8Array(digest)).map((byte) => byte.toString(16).padStart(2, "0")).join("");
-}
-
-export default function DataImportPage() {
-  const [file, setFile] = useState<File | null>(null);
-  const [fileName, setFileName] = useState("");
-  const [rows, setRows] = useState<Row[]>([]);
-  const [headers, setHeaders] = useState<string[]>([]);
-  const [issues, setIssues] = useState<ValidationIssue[]>([]);
-  const [status, setStatus] = useState<"idle" | "reading" | "validated" | "saving" | "saved">("idle");
-  const [error, setError] = useState("");
-  const [savedImportId, setSavedImportId] = useState("");
-
-  const mapping = useMemo(() => mapHeaders(headers), [headers]);
-  const missing = required.filter((field) => !mapping[field]);
-  const canSave = missing.length === 0 && issues.length === 0 && rows.length > 0;
-
-  async function handleFile(event: ChangeEvent<HTMLInputElement>) {
-    const selectedFile = event.target.files?.[0];
-    if (!selectedFile) return;
-    setStatus("reading");
-    setError("");
-    setIssues([]);
-    setRows([]);
-    setHeaders([]);
-    setSavedImportId("");
-    setFile(selectedFile);
-    setFileName(selectedFile.name);
-
-    if (selectedFile.size > 20 * 1024 * 1024) {
-      setStatus("idle");
-      setError("حجم الملف يتجاوز 20MB. قسّم الملف إلى دفعات أصغر قبل الاستيراد.");
-      return;
-    }
-
-    try {
-      const buffer = await selectedFile.arrayBuffer();
-      const workbook = XLSX.read(buffer, { type: "array", cellDates: true });
-      const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
-      if (!firstSheet) throw new Error("لم يتم العثور على ورقة بيانات داخل الملف");
-      const parsed = XLSX.utils.sheet_to_json<Row>(firstSheet, { defval: "" });
-      if (parsed.length === 0) throw new Error("الملف لا يحتوي على صفوف بيانات");
-      const detectedHeaders = Object.keys(parsed[0]);
-      const detectedMapping = mapHeaders(detectedHeaders);
-      setHeaders(detectedHeaders);
-      setRows(parsed);
-      setIssues(validate(parsed, detectedMapping));
-      setStatus("validated");
-    } catch (err) {
-      setStatus("idle");
-      setError(err instanceof Error ? err.message : "تعذر قراءة الملف");
-    }
-  }
-
-  async function saveImport() {
-    if (!file || !canSave || status !== "validated") return;
-    setStatus("saving");
-    setError("");
-
-    try {
-      const workspaceId = window.sessionStorage.getItem("activeOrganizationId") || window.localStorage.getItem("activeOrganizationId");
-      if (!workspaceId) throw new Error("لم يتم تحديد مساحة عمل. افتح مساحة العمل أولًا ثم أعد المحاولة.");
-
-      const supabase = getSupabaseBrowserClient();
-      const { data: userData, error: userError } = await supabase.auth.getUser();
-      if (userError) throw userError;
-      if (!userData.user) throw new Error("الحفظ في قاعدة البيانات يتطلب تسجيل الدخول.");
-
-      const payload = normalizeRows(rows, mapping);
-      const fileHash = await sha256(file);
-      const { data, error: rpcError } = await supabase.rpc("ingest_validated_import", {
-        p_organization_id: workspaceId,
-        p_file_name: file.name,
-        p_file_hash: fileHash,
-        p_rows: payload,
-      });
-
-      if (rpcError) throw rpcError;
-      if (!data) throw new Error("لم يتم إرجاع رقم عملية الاستيراد");
-
-      setSavedImportId(String(data));
-      setStatus("saved");
-    } catch (err) {
-      setStatus("validated");
-      setError(err instanceof Error ? err.message : "تعذر حفظ عملية الاستيراد");
-    }
-  }
-
-  function downloadTemplate() {
-    const data = [
-      { التاريخ: "2026-01-01", "رقم القيد": "JE-0001", "وصف القيد": "مثال تجريبي", "كود الحساب": "1000", "اسم الحساب": "البنك", مدين: 1000, دائن: 0 },
-      { التاريخ: "2026-01-01", "رقم القيد": "JE-0001", "وصف القيد": "مثال تجريبي", "كود الحساب": "4000", "اسم الحساب": "الإيرادات", مدين: 0, دائن: 1000 },
-    ];
-    const worksheet = XLSX.utils.json_to_sheet(data);
-    worksheet["!freeze"] = { xSplit: 0, ySplit: 1 };
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, "القيود اليومية");
-    XLSX.utils.book_append_sheet(workbook, XLSX.utils.aoa_to_sheet([["تعليمات"], ["التاريخ يجب أن يكون بصيغة YYYY-MM-DD"], ["يجب أن يتوازن كل رقم قيد: إجمالي المدين = إجمالي الدائن"], ["كل سطر يحتوي مدين أو دائن فقط وليس الاثنين معًا"], ["كود الحساب واسم الحساب مطلوبان في كل سطر"], ["الأبعاد التحليلية اختيارية ويمكن تركها فارغة"]]), "تعليمات");
-    XLSX.writeFile(workbook, "FPA-journal-template.xlsx");
-  }
-
-  return (
-    <main className="min-h-screen bg-[#f7f8fa] text-[#172033]" dir="rtl">
-      <header className="border-b border-slate-200 bg-white">
-        <div className="mx-auto flex w-full max-w-[1500px] items-center justify-between gap-4 px-4 py-4 sm:px-6 lg:px-8">
-          <a href="/workspace" className="shrink-0 text-xs font-semibold text-slate-500 hover:text-slate-950 sm:text-sm">العودة لمساحة العمل</a>
-          <div className="min-w-0 text-right"><p className="text-[10px] font-bold tracking-[0.14em] text-slate-400 sm:text-xs">DATA & IMPORTS</p><h1 className="mt-1 truncate text-base font-bold text-slate-950 sm:text-lg">الاستيراد والتحقق</h1></div>
-        </div>
-      </header>
-
-      <section className="mx-auto w-full max-w-[1500px] px-4 py-7 sm:px-6 sm:py-9 lg:px-8 lg:py-10">
-        <div className="border-b border-slate-200 pb-7 sm:pb-8">
-          <div className="flex flex-col gap-5 xl:flex-row xl:items-end xl:justify-between">
-            <div className="min-w-0">
-              <p className="text-xs font-bold text-slate-400 sm:text-sm">دورة البيانات</p>
-              <h2 className="mt-2 text-2xl font-bold tracking-tight text-slate-950 sm:text-3xl lg:text-4xl">استيراد البيانات المالية</h2>
-              <p className="mt-3 max-w-3xl text-sm leading-7 text-slate-500 sm:text-base sm:leading-8">ارفع ملف Excel أو CSV. النظام يتحقق محليًا ثم يعيد التحقق داخل قاعدة البيانات قبل حفظ عملية الاستيراد وصفوفها.</p>
-            </div>
-            <button type="button" onClick={downloadTemplate} className="inline-flex min-h-11 w-full shrink-0 items-center justify-center rounded-xl border border-slate-300 bg-white px-5 py-3 text-sm font-bold text-slate-900 hover:bg-slate-50 sm:w-auto">تنزيل قالب Excel</button>
-          </div>
-        </div>
-
-        <div className="mt-7 grid gap-5 lg:grid-cols-[minmax(300px,0.72fr)_minmax(0,1.28fr)] lg:gap-6">
-          <section className="min-w-0 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6 lg:p-7">
-            <p className="text-sm font-bold text-slate-900">1. ارفع الملف</p>
-            <label className="mt-5 flex min-h-48 cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed border-slate-300 bg-slate-50 p-5 text-center transition hover:border-slate-500 sm:min-h-52 sm:p-6">
-              <input type="file" accept=".xlsx,.xls,.csv" onChange={handleFile} className="hidden" />
-              <span className="text-base font-bold text-slate-900 sm:text-lg">اختر ملف Excel أو CSV</span>
-              <span className="mt-2 text-xs leading-6 text-slate-500 sm:text-sm">الحد الأقصى 20MB في هذه المرحلة</span>
-              {fileName && <span className="mt-5 max-w-full truncate rounded-lg bg-white px-3 py-2 text-xs font-semibold text-slate-700">{fileName}</span>}
-            </label>
-            {status === "reading" && <p className="mt-4 text-sm font-semibold text-slate-500">جاري قراءة الملف والتحقق منه...</p>}
-            {status === "saving" && <p className="mt-4 text-sm font-semibold text-slate-500">جاري حفظ عملية الاستيراد والتحقق منها داخل قاعدة البيانات...</p>}
-            {error && <p className="mt-4 rounded-xl bg-red-50 p-4 text-sm font-semibold leading-6 text-red-700">{error}</p>}
-            {status === "saved" && <div className="mt-4 rounded-xl bg-emerald-50 p-4 text-sm font-semibold leading-6 text-emerald-800">تم حفظ الاستيراد بنجاح. رقم العملية: {savedImportId}</div>}
-            <div className="mt-6 rounded-2xl bg-slate-50 p-4 text-sm leading-7 text-slate-600 sm:p-5">
-              <p className="font-bold text-slate-900">قواعد الاستيراد</p>
-              <ul className="mt-3 list-disc space-y-1 pr-5"><li>كل قيد يجب أن يكون متوازنًا</li><li>لا يوجد مدين ودائن في السطر نفسه</li><li>لا نقبل قيمًا سالبة</li><li>كود واسم الحساب مطلوبان</li><li>الأبعاد التحليلية اختيارية</li></ul>
-            </div>
-          </section>
-
-          <section className="min-w-0 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6 lg:p-7">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <div><p className="text-sm font-bold text-slate-900">2. نتيجة التحقق</p><p className="mt-1 text-xs leading-6 text-slate-500 sm:text-sm">لا يتم نشر أي Financial Facts من هذه الشاشة.</p></div>
-              {status === "validated" && <span className={`self-start rounded-full px-3 py-1 text-xs font-bold sm:self-auto ${canSave ? "bg-emerald-50 text-emerald-700" : "bg-red-50 text-red-700"}`}>{canSave ? "صالح للحفظ" : "يحتاج تصحيح"}</span>}
-            </div>
-
-            {status === "validated" || status === "saving" || status === "saved" ? (
-              <>
-                <div className="mt-6 grid gap-3 sm:grid-cols-3">
-                  <div className="rounded-2xl bg-slate-50 p-4"><p className="text-xs text-slate-500">عدد الصفوف</p><p className="mt-2 text-2xl font-bold">{rows.length}</p></div>
-                  <div className="rounded-2xl bg-slate-50 p-4"><p className="text-xs text-slate-500">الأخطاء</p><p className="mt-2 text-2xl font-bold text-red-700">{issues.length}</p></div>
-                  <div className="rounded-2xl bg-slate-50 p-4"><p className="text-xs text-slate-500">أعمدة مطلوبة مفقودة</p><p className="mt-2 text-2xl font-bold">{missing.length}</p></div>
-                </div>
-
-                {missing.length > 0 && <div className="mt-5 rounded-2xl bg-red-50 p-4 text-sm text-red-800 sm:p-5"><p className="font-bold">الأعمدة المطلوبة غير موجودة</p><p className="mt-2 break-words">{missing.join("، ")}</p></div>}
-                {issues.length > 0 && <div className="mt-5 max-h-64 overflow-auto rounded-2xl border border-red-100 bg-red-50 p-4 sm:p-5"><p className="font-bold text-red-800">الأخطاء المكتشفة</p><div className="mt-3 space-y-2 text-sm text-red-700">{issues.slice(0, 100).map((issue, index) => <p key={`${issue.row}-${index}`}>السطر {issue.row}: {issue.message}</p>)}</div>{issues.length > 100 && <p className="mt-3 text-xs font-semibold">تم عرض أول 100 خطأ فقط.</p>}</div>}
-
-                {canSave && status === "validated" && <button type="button" onClick={saveImport} className="mt-6 min-h-11 w-full rounded-xl bg-slate-950 px-6 py-3.5 text-sm font-bold text-white transition hover:bg-slate-800">حفظ الاستيراد في قاعدة البيانات</button>}
-                {status === "saved" && <div className="mt-6 rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm font-semibold leading-7 text-emerald-800 sm:p-5">تم حفظ Import و Import Rows فقط. لن تظهر البيانات في التقارير أو Actuals حتى تمر بالمطابقة ثم النشر.</div>}
-              </>
-            ) : (
-              <div className="mt-10 rounded-2xl border border-dashed border-slate-200 bg-slate-50 p-8 text-center text-sm leading-7 text-slate-500 sm:p-10">ارفع ملفًا لبدء التحقق.</div>
-            )}
-          </section>
-        </div>
-      </section>
-    </main>
-  );
+export default function DataImportPage(){
+  const router=useRouter(); const [file,setFile]=useState<File|null>(null); const [fileName,setFileName]=useState(""); const [rows,setRows]=useState<Row[]>([]); const [headers,setHeaders]=useState<string[]>([]); const [issues,setIssues]=useState<ValidationIssue[]>([]); const [status,setStatus]=useState<"idle"|"reading"|"validated"|"saving">("idle"); const [error,setError]=useState("");
+  const mapping=useMemo(()=>mapHeaders(headers),[headers]); const missing=required.filter(field=>!mapping[field]); const canSave=missing.length===0&&issues.length===0&&rows.length>0;
+  async function handleFile(event:ChangeEvent<HTMLInputElement>){const selectedFile=event.target.files?.[0]; if(!selectedFile)return; setStatus("reading");setError("");setIssues([]);setRows([]);setHeaders([]);setFile(selectedFile);setFileName(selectedFile.name); if(selectedFile.size>20*1024*1024){setStatus("idle");setError("حجم الملف يتجاوز 20MB. قسّم الملف إلى دفعات أصغر قبل الاستيراد.");return;} try{const buffer=await selectedFile.arrayBuffer();const workbook=XLSX.read(buffer,{type:"array",cellDates:true});const firstSheet=workbook.Sheets[workbook.SheetNames[0]];if(!firstSheet)throw new Error("لم يتم العثور على ورقة بيانات داخل الملف");const parsed=XLSX.utils.sheet_to_json<Row>(firstSheet,{defval:""});if(parsed.length===0)throw new Error("الملف لا يحتوي على صفوف بيانات");const detectedHeaders=Object.keys(parsed[0]);const detectedMapping=mapHeaders(detectedHeaders);setHeaders(detectedHeaders);setRows(parsed);setIssues(validate(parsed,detectedMapping));setStatus("validated");}catch(err){setStatus("idle");setError(err instanceof Error?err.message:"تعذر قراءة الملف");}}
+  async function saveImport(){if(!file||!canSave||status!=="validated")return;setStatus("saving");setError("");try{const workspaceId=window.sessionStorage.getItem("activeOrganizationId")||window.localStorage.getItem("activeOrganizationId");if(!workspaceId)throw new Error("لم يتم تحديد مساحة عمل. افتح مساحة العمل أولًا ثم أعد المحاولة.");const supabase=getSupabaseBrowserClient();const {data:userData,error:userError}=await supabase.auth.getUser();if(userError)throw userError;if(!userData.user)throw new Error("الحفظ يتطلب تسجيل الدخول.");const {data,error:rpcError}=await supabase.rpc("ingest_validated_import",{p_organization_id:workspaceId,p_file_name:file.name,p_file_hash:await sha256(file),p_rows:normalizeRows(rows,mapping)});if(rpcError)throw rpcError;if(!data)throw new Error("لم يتم إرجاع رقم عملية الاستيراد");router.push(`/workspace/data/${data}`);}catch(err){setStatus("validated");setError(err instanceof Error?err.message:"تعذر حفظ عملية الاستيراد");}}
+  function downloadTemplate(){const data=[{التاريخ:"2026-01-01","رقم القيد":"JE-0001","وصف القيد":"مثال تجريبي","كود الحساب":"1000","اسم الحساب":"البنك",مدين:1000,دائن:0},{التاريخ:"2026-01-01","رقم القيد":"JE-0001","وصف القيد":"مثال تجريبي","كود الحساب":"4000","اسم الحساب":"الإيرادات",مدين:0,دائن:1000}];const worksheet=XLSX.utils.json_to_sheet(data);worksheet["!freeze"]={xSplit:0,ySplit:1};const workbook=XLSX.utils.book_new();XLSX.utils.book_append_sheet(workbook,worksheet,"القيود اليومية");XLSX.utils.book_append_sheet(workbook,XLSX.utils.aoa_to_sheet([["تعليمات"],["التاريخ يجب أن يكون بصيغة YYYY-MM-DD"],["يجب أن يتوازن كل رقم قيد: إجمالي المدين = إجمالي الدائن"],["كل سطر يحتوي مدين أو دائن فقط وليس الاثنين معًا"],["كود الحساب واسم الحساب مطلوبان في كل سطر"],["الأبعاد التحليلية اختيارية ويمكن تركها فارغة"]]),"تعليمات");XLSX.writeFile(workbook,"FPA-journal-template.xlsx");}
+  return <main className="min-h-screen bg-[#f7f8fa] text-[#172033]" dir="rtl"><header className="border-b border-slate-200 bg-white"><div className="mx-auto flex w-full max-w-[1500px] items-center justify-between gap-4 px-4 py-4 sm:px-6 lg:px-8"><a href="/workspace" className="text-xs font-semibold text-slate-500 hover:text-slate-950 sm:text-sm">العودة لمساحة العمل</a><div className="text-right"><p className="text-[10px] font-bold tracking-[0.14em] text-slate-400 sm:text-xs">DATA & IMPORTS</p><h1 className="mt-1 text-base font-bold text-slate-950 sm:text-lg">الاستيراد والتحقق</h1></div></div></header><section className="mx-auto w-full max-w-[1500px] px-4 py-7 sm:px-6 sm:py-9 lg:px-8 lg:py-10"><div className="border-b border-slate-200 pb-7"><div className="flex flex-col gap-5 xl:flex-row xl:items-end xl:justify-between"><div><p className="text-xs font-bold text-slate-400 sm:text-sm">دورة البيانات</p><h2 className="mt-2 text-2xl font-bold tracking-tight text-slate-950 sm:text-3xl lg:text-4xl">استيراد البيانات المالية</h2><p className="mt-3 max-w-3xl text-sm leading-7 text-slate-500 sm:text-base">ارفع Excel أو CSV. بعد الحفظ تنتقل مباشرة إلى مساحة مراجعة الاستيراد لإكمال المطابقة والتحقق والنشر.</p></div><button type="button" onClick={downloadTemplate} className="inline-flex min-h-11 w-full items-center justify-center rounded-xl border border-slate-300 bg-white px-5 py-3 text-sm font-bold text-slate-900 hover:bg-slate-50 sm:w-auto">تنزيل قالب Excel</button></div></div><div className="mt-7 grid gap-5 lg:grid-cols-[minmax(300px,0.72fr)_minmax(0,1.28fr)] lg:gap-6"><section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6 lg:p-7"><p className="text-sm font-bold text-slate-900">1. ارفع الملف</p><label className="mt-5 flex min-h-48 cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed border-slate-300 bg-slate-50 p-5 text-center hover:border-slate-500"><input type="file" accept=".xlsx,.xls,.csv" onChange={handleFile} className="hidden"/><span className="text-base font-bold text-slate-900 sm:text-lg">اختر ملف Excel أو CSV</span><span className="mt-2 text-xs leading-6 text-slate-500 sm:text-sm">الحد الأقصى 20MB في هذه المرحلة</span>{fileName&&<span className="mt-5 max-w-full truncate rounded-lg bg-white px-3 py-2 text-xs font-semibold text-slate-700">{fileName}</span>}</label>{status==="reading"&&<p className="mt-4 text-sm font-semibold text-slate-500">جاري قراءة الملف والتحقق منه...</p>}{status==="saving"&&<p className="mt-4 text-sm font-semibold text-slate-500">جاري حفظ الاستيراد...</p>}{error&&<p className="mt-4 rounded-xl bg-red-50 p-4 text-sm font-semibold leading-6 text-red-700">{error}</p>}<div className="mt-6 rounded-2xl bg-slate-50 p-4 text-sm leading-7 text-slate-600"><p className="font-bold text-slate-900">قواعد الاستيراد</p><ul className="mt-3 list-disc space-y-1 pr-5"><li>كل قيد يجب أن يكون متوازنًا</li><li>لا يوجد مدين ودائن في السطر نفسه</li><li>لا نقبل قيمًا سالبة</li><li>كود واسم الحساب مطلوبان</li><li>الأبعاد التحليلية اختيارية</li></ul></div></section><section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6 lg:p-7"><div className="flex items-center justify-between"><div><p className="text-sm font-bold text-slate-900">2. نتيجة التحقق</p><p className="mt-1 text-xs leading-6 text-slate-500 sm:text-sm">هذه المرحلة لا تنشر Financial Facts.</p></div>{status==="validated"&&<span className={`rounded-full px-3 py-1 text-xs font-bold ${canSave?"bg-emerald-50 text-emerald-700":"bg-red-50 text-red-700"}`}>{canSave?"صالح للحفظ":"يحتاج تصحيح"}</span>}</div>{status==="validated"||status==="saving"?(<><div className="mt-6 grid gap-3 sm:grid-cols-3"><div className="rounded-2xl bg-slate-50 p-4"><p className="text-xs text-slate-500">عدد الصفوف</p><p className="mt-2 text-2xl font-bold">{rows.length}</p></div><div className="rounded-2xl bg-slate-50 p-4"><p className="text-xs text-slate-500">الأخطاء</p><p className="mt-2 text-2xl font-bold text-red-700">{issues.length}</p></div><div className="rounded-2xl bg-slate-50 p-4"><p className="text-xs text-slate-500">أعمدة مطلوبة مفقودة</p><p className="mt-2 text-2xl font-bold">{missing.length}</p></div></div>{missing.length>0&&<div className="mt-5 rounded-2xl bg-red-50 p-4 text-sm text-red-800"><p className="font-bold">الأعمدة المطلوبة غير موجودة</p><p className="mt-2">{missing.join("، ")}</p></div>}{issues.length>0&&<div className="mt-5 max-h-64 overflow-auto rounded-2xl border border-red-100 bg-red-50 p-4 text-sm text-red-700"><p className="font-bold">الأخطاء المكتشفة</p><div className="mt-3 space-y-2">{issues.slice(0,100).map((issue,index)=><p key={`${issue.row}-${index}`}>السطر {issue.row}: {issue.message}</p>)}</div></div>}{canSave&&status==="validated"&&<button type="button" onClick={saveImport} className="mt-6 min-h-11 w-full rounded-xl bg-slate-950 px-6 py-3.5 text-sm font-bold text-white hover:bg-slate-800">حفظ والانتقال إلى مراجعة الاستيراد</button>}</>):<div className="mt-10 rounded-2xl border border-dashed border-slate-200 bg-slate-50 p-8 text-center text-sm leading-7 text-slate-500">ارفع ملفًا لبدء التحقق.</div>}</section></div></section></main>;
 }
