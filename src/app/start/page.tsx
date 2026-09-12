@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 
@@ -13,6 +13,8 @@ type Company = {
   base_currency: string;
   role: string;
   role_key: string;
+  parent_organization_id: string | null;
+  children_count: number;
 };
 
 const roleLabels: Record<string, string> = {
@@ -134,6 +136,8 @@ export default function StartPage() {
     }
   }
 
+  const companyTree = useMemo(() => buildCompanyTree(companies), [companies]);
+
   if (state === "loading") {
     return <CenteredState text="جارٍ تحميل مساحة العمل…" />;
   }
@@ -166,28 +170,22 @@ export default function StartPage() {
         <button type="button" onClick={() => router.push("/start/new")} className="shrink-0 rounded-xl bg-slate-950 px-4 py-2.5 text-sm font-bold text-white hover:bg-slate-800 sm:px-5">+ إضافة شركة</button>
       </header>
       <section className="mx-auto w-full max-w-7xl py-8 sm:py-10 lg:py-14">
-        <div className="max-w-3xl"><p className="text-xs font-bold tracking-[0.16em] text-slate-400">YOUR WORKSPACES</p><h2 className="mt-3 text-3xl font-bold tracking-tight text-slate-950 sm:text-4xl">اختر الشركة التي تريد العمل عليها</h2><p className="mt-3 text-sm leading-7 text-slate-500 sm:text-base">تظهر لك فقط الشركات التي لديك صلاحية الوصول إليها. عند اختيار شركة نفتح مساحة العمل مباشرة حسب صلاحياتك.</p></div>
-        <div className="mt-8 grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
-          {companies.map((company) => {
-            const canDelete = company.role_key === "company_admin" || company.role === "owner" || company.role === "admin";
-            return (
-              <article key={company.id} className="rounded-3xl border border-slate-200 bg-white p-6 text-right shadow-sm transition hover:border-slate-300 hover:shadow-md">
-                <button type="button" onClick={() => enterCompany(company)} className="group block w-full text-right">
-                  <div className="flex items-start justify-between gap-4"><div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-slate-950 text-lg font-bold text-white">{company.name.slice(0, 1)}</div><span className="rounded-full bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-600">{roleLabels[company.role_key] ?? roleLabels[company.role] ?? company.role_key}</span></div>
-                  <h3 className="mt-6 text-xl font-bold text-slate-950">{company.name}</h3>
-                  <p className="mt-2 min-h-6 text-sm text-slate-500">{company.industry || "قطاع غير محدد"}{company.city ? ` · ${company.city}` : ""}</p>
-                  <div className="mt-6 flex items-center justify-between border-t border-slate-100 pt-4 text-xs text-slate-400"><span>{company.base_currency}</span><span className="font-bold text-slate-700 group-hover:text-slate-950">دخول إلى الشركة ←</span></div>
-                </button>
-                {canDelete && (
-                  <div className="mt-4 border-t border-slate-100 pt-4">
-                    <button type="button" onClick={() => openDelete(company)} className="text-xs font-semibold text-red-600 hover:text-red-800">حذف الشركة</button>
-                  </div>
-                )}
-              </article>
-            );
-          })}
+        <div className="max-w-3xl"><p className="text-xs font-bold tracking-[0.16em] text-slate-400">YOUR ORGANIZATION GROUP</p><h2 className="mt-3 text-3xl font-bold tracking-tight text-slate-950 sm:text-4xl">هيكل الشركات</h2><p className="mt-3 text-sm leading-7 text-slate-500 sm:text-base">تظهر الشركات في شكل هرمي يوضح الشركة الأم والشركات التابعة تحتها. يمكنك الدخول إلى أي شركة لديك صلاحية الوصول إليها.</p></div>
+
+        <div className="mt-8 rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-7">
+          <div className="flex flex-col gap-4 border-b border-slate-100 pb-5 sm:flex-row sm:items-center sm:justify-between">
+            <div><h3 className="text-lg font-bold text-slate-950">شجرة المجموعة</h3><p className="mt-1 text-sm text-slate-500">{companies.length} شركة في مساحة العمل</p></div>
+            <div className="flex flex-wrap gap-2 text-xs font-semibold text-slate-500"><span className="rounded-full bg-slate-100 px-3 py-1.5">شركة أم</span><span className="rounded-full bg-blue-50 px-3 py-1.5 text-blue-700">شركة تابعة</span></div>
+          </div>
+
+          <div className="mt-7">
+            {companyTree.map((node) => (
+              <CompanyTreeNode key={node.company.id} node={node} depth={0} onEnter={enterCompany} onDelete={openDelete} />
+            ))}
+          </div>
         </div>
-        <div className="mt-8 rounded-2xl border border-slate-200 bg-white p-5 text-sm leading-7 text-slate-500 sm:p-6"><span className="font-bold text-slate-900">فكرة المساحة:</span> نفس الشركة يمكن أن يعمل عليها فريق كامل، لكن كل مستخدم يرى وينفذ فقط ما تسمح به صلاحياته. إدارة الفريق والصلاحيات جزء أساسي من مساحة العمل.</div>
+
+        <div className="mt-8 rounded-2xl border border-slate-200 bg-white p-5 text-sm leading-7 text-slate-500 sm:p-6"><span className="font-bold text-slate-900">هيكل المجموعة:</span> العلاقة بين الشركات تعتمد على الشركة الأم المسجلة لكل شركة، لذلك يمكن بناء مستويات متعددة مثل شركة قابضة ← شركة تابعة ← شركة تشغيلية.</div>
       </section>
 
       {deleteTarget && (
@@ -207,6 +205,65 @@ export default function StartPage() {
         </div>
       )}
     </main>
+  );
+}
+
+type CompanyTreeNodeData = { company: Company; children: CompanyTreeNodeData[] };
+
+function buildCompanyTree(companies: Company[]): CompanyTreeNodeData[] {
+  const nodes = new Map<string, CompanyTreeNodeData>();
+  for (const company of companies) nodes.set(company.id, { company, children: [] });
+
+  const roots: CompanyTreeNodeData[] = [];
+  for (const company of companies) {
+    const node = nodes.get(company.id)!;
+    const parent = company.parent_organization_id ? nodes.get(company.parent_organization_id) : undefined;
+    if (parent && parent.company.id !== company.id) parent.children.push(node);
+    else roots.push(node);
+  }
+
+  const sortNodes = (items: CompanyTreeNodeData[]) => {
+    items.sort((a, b) => a.company.name.localeCompare(b.company.name, "ar"));
+    for (const item of items) sortNodes(item.children);
+  };
+  sortNodes(roots);
+  return roots;
+}
+
+function CompanyTreeNode({ node, depth, onEnter, onDelete }: { node: CompanyTreeNodeData; depth: number; onEnter: (company: Company) => void; onDelete: (company: Company) => void }) {
+  const company = node.company;
+  const canDelete = company.role_key === "company_admin" || company.role === "owner" || company.role === "admin";
+
+  return (
+    <div className={depth > 0 ? "mr-5 border-r-2 border-slate-200 pr-5 sm:mr-8 sm:pr-7" : ""}>
+      <article className="group relative rounded-2xl border border-slate-200 bg-slate-50/60 p-4 transition hover:border-slate-300 hover:bg-white hover:shadow-sm sm:p-5">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <button type="button" onClick={() => onEnter(company)} className="flex min-w-0 items-center gap-4 text-right">
+            <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl text-lg font-bold text-white ${depth === 0 ? "bg-slate-950" : "bg-blue-700"}`}>{company.name.slice(0, 1)}</div>
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-2">
+                <h4 className="truncate text-base font-bold text-slate-950 sm:text-lg">{company.name}</h4>
+                <span className={`rounded-full px-2.5 py-1 text-[11px] font-bold ${depth === 0 ? "bg-slate-200 text-slate-700" : "bg-blue-100 text-blue-700"}`}>{depth === 0 ? "شركة أم" : "شركة تابعة"}</span>
+              </div>
+              <p className="mt-1 text-xs text-slate-500">{company.industry || "قطاع غير محدد"}{company.city ? ` · ${company.city}` : ""}</p>
+            </div>
+          </button>
+
+          <div className="flex flex-wrap items-center gap-2 sm:justify-end">
+            <span className="rounded-full bg-white px-3 py-1.5 text-xs font-semibold text-slate-600 ring-1 ring-slate-200">{roleLabels[company.role_key] ?? roleLabels[company.role] ?? company.role_key}</span>
+            {node.children.length > 0 && <span className="rounded-full bg-blue-50 px-3 py-1.5 text-xs font-semibold text-blue-700">{node.children.length} تابع</span>}
+            <button type="button" onClick={() => onEnter(company)} className="rounded-xl bg-slate-950 px-3.5 py-2 text-xs font-bold text-white hover:bg-slate-800">دخول</button>
+            {canDelete && <button type="button" onClick={() => onDelete(company)} className="rounded-xl border border-red-200 bg-white px-3.5 py-2 text-xs font-bold text-red-600 hover:bg-red-50">حذف</button>}
+          </div>
+        </div>
+      </article>
+
+      {node.children.length > 0 && (
+        <div className="mt-3 space-y-3">
+          {node.children.map((child) => <CompanyTreeNode key={child.company.id} node={child} depth={depth + 1} onEnter={onEnter} onDelete={onDelete} />)}
+        </div>
+      )}
+    </div>
   );
 }
 
