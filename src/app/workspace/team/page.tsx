@@ -1,120 +1,34 @@
 "use client";
-
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 
 const roles = [
-  ["company_admin", "مسؤول الشركة", "إدارة المستخدمين والإعدادات والصلاحيات"],
-  ["ceo", "الرئيس التنفيذي", "الرؤية التنفيذية والقرارات"],
-  ["cfo", "المدير المالي", "التخطيط والمراجعة والاعتماد"],
-  ["finance_manager", "مدير مالي", "التخطيط والتوقعات والتحليل"],
-  ["fpa_analyst", "محلل FP&A", "النماذج والتوقعات والسيناريوهات"],
-  ["accountant", "محاسب", "الفعلي والاستيراد والمطابقات"],
-  ["department_manager", "مدير قسم", "بيانات وأداء القسم"],
-  ["sales_manager", "مدير مبيعات", "افتراضات المبيعات"],
-  ["hr_manager", "مدير الموارد البشرية", "القوى العاملة"],
-  ["procurement_manager", "مدير المشتريات", "المشتريات والتكاليف"],
-  ["operations_manager", "مدير العمليات", "المحركات التشغيلية"],
-  ["viewer", "مطلع", "عرض البيانات المسموح بها"],
+  ["company_admin", "مسؤول الشركة", "إدارة المستخدمين والإعدادات والصلاحيات"], ["ceo", "الرئيس التنفيذي", "الرؤية التنفيذية والقرارات"], ["cfo", "المدير المالي", "التخطيط والمراجعة والاعتماد"], ["finance_manager", "مدير مالي", "التخطيط والتوقعات والتحليل"], ["fpa_analyst", "محلل FP&A", "النماذج والتوقعات والسيناريوهات"], ["accountant", "محاسب", "الفعلي والاستيراد والمطابقات"], ["department_manager", "مدير قسم", "بيانات وأداء القسم"], ["sales_manager", "مدير مبيعات", "افتراضات المبيعات"], ["hr_manager", "مدير الموارد البشرية", "القوى العاملة"], ["procurement_manager", "مدير المشتريات", "المشتريات والتكاليف"], ["operations_manager", "مدير العمليات", "المحركات التشغيلية"], ["viewer", "مطلع", "عرض البيانات المسموح بها"],
 ] as const;
+const permissions = [["view","عرض"],["create","إنشاء"],["edit","تعديل"],["delete","حذف"],["import","استيراد"],["export","تصدير"],["submit","إرسال"],["approve","اعتماد"],["reject","رفض"],["lock","قفل"],["manage_users","إدارة المستخدمين"],["manage_settings","الإعدادات"],["manage_budget","الميزانية"],["manage_forecast","التوقعات"],["manage_scenarios","السيناريوهات"],["access_ai","المحلل المالي الذكي"]] as const;
+type Member={user_id:string;email:string|null;role:string;role_key:string;created_at:string;overrides:Record<string,boolean>};
 
-const permissions = [
-  ["view", "عرض"], ["create", "إنشاء"], ["edit", "تعديل"], ["delete", "حذف"],
-  ["import", "استيراد"], ["export", "تصدير"], ["submit", "إرسال"], ["approve", "اعتماد"],
-  ["reject", "رفض"], ["lock", "قفل"], ["manage_users", "إدارة المستخدمين"], ["manage_settings", "الإعدادات"],
-  ["manage_budget", "الميزانية"], ["manage_forecast", "التوقعات"], ["manage_scenarios", "السيناريوهات"], ["access_ai", "المحلل المالي الذكي"],
-] as const;
-
-type Member = { user_id: string; role: string; role_key: string | null; created_at: string };
-
-export default function TeamPage() {
-  const [members, setMembers] = useState<Member[]>([]);
-  const [selectedRole, setSelectedRole] = useState("company_admin");
-  const [selectedPermission, setSelectedPermission] = useState("view");
-  const [canManage, setCanManage] = useState(false);
-  const [error, setError] = useState("");
-
-  useEffect(() => {
-    async function load() {
-      const supabase = getSupabaseBrowserClient();
-      const { data: userData } = await supabase.auth.getUser();
-      if (!userData.user) return;
-      const organizationId = window.sessionStorage.getItem("activeOrganizationId");
-      if (!organizationId) return;
-
-      const { data, error: membersError } = await supabase
-        .from("organization_members")
-        .select("user_id, role, role_key, created_at")
-        .eq("organization_id", organizationId)
-        .order("created_at", { ascending: true });
-      if (membersError) {
-        setError("تعذر تحميل أعضاء الشركة.");
-        return;
-      }
-      setMembers(data ?? []);
-
-      const { data: permission } = await supabase.rpc("has_org_permission", {
-        p_organization_id: organizationId,
-        p_permission_key: "manage_users",
-      });
-      setCanManage(Boolean(permission));
-    }
-    void load();
-  }, []);
-
-  const roleName = (key: string | null, legacy: string) => roles.find(([role]) => role === (key ?? legacy))?.[1] ?? legacy;
-
-  return (
-    <main className="min-h-screen bg-[#f7f8fa] text-[#172033]" dir="rtl">
-      <header className="border-b border-slate-200 bg-white">
-        <div className="mx-auto flex w-full max-w-[1500px] items-center justify-between gap-4 px-4 py-4 sm:px-6 lg:px-8">
-          <Link href="/workspace" className="text-sm font-semibold text-slate-500 hover:text-slate-950">العودة لمساحة العمل</Link>
-          <div className="text-right"><p className="text-xs font-bold tracking-[0.14em] text-slate-400">IDENTITY & ACCESS</p><h1 className="mt-1 font-bold text-slate-950">الفريق والصلاحيات</h1></div>
-        </div>
-      </header>
-
-      <section className="mx-auto w-full max-w-[1500px] px-4 py-7 sm:px-6 lg:px-8 lg:py-10">
-        <div className="flex flex-col gap-5 border-b border-slate-200 pb-7 lg:flex-row lg:items-end lg:justify-between">
-          <div className="max-w-3xl"><p className="text-xs font-bold text-slate-400">ONE COMPANY · MANY USERS</p><h2 className="mt-2 text-2xl font-bold tracking-tight text-slate-950 sm:text-3xl">كل عضو يعمل داخل نفس الشركة بصلاحياته ونطاقه</h2><p className="mt-3 text-sm leading-7 text-slate-500 sm:text-base">الأدوار مجرد قوالب. التفويض الحقيقي مبني على الصلاحية + نطاق الشركة أو الفرع أو القسم أو مركز التكلفة. لذلك يمكن أن يعمل فريق من 10 أو 50 شخصًا دون إعطاء الجميع صلاحية الاعتماد أو تعديل كل البيانات.</p></div>
-          <button type="button" disabled={!canManage} className="w-full rounded-xl bg-slate-950 px-5 py-3.5 text-sm font-bold text-white disabled:cursor-not-allowed disabled:opacity-40 sm:w-auto">دعوة عضو جديد</button>
-        </div>
-
-        {error && <div className="mt-6 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">{error}</div>}
-
-        <div className="mt-7 grid gap-4 sm:grid-cols-3">
-          <Stat label="أعضاء الشركة" value={members.length} />
-          <Stat label="قوالب الأدوار" value={roles.length} />
-          <Stat label="الصلاحيات المتاحة" value={permissions.length} />
-        </div>
-
-        <div className="mt-6 grid gap-6 xl:grid-cols-[1.25fr_0.75fr]">
-          <section className="rounded-3xl border border-slate-200 bg-white shadow-sm">
-            <div className="border-b border-slate-200 p-5 sm:p-6"><h3 className="font-bold text-slate-950">أعضاء الشركة</h3><p className="mt-1 text-sm text-slate-500">العضوية مرتبطة بالشركة الحالية فقط.</p></div>
-            <div className="divide-y divide-slate-100">
-              {members.map((member, index) => (
-                <div key={member.user_id} className="flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6">
-                  <div className="flex min-w-0 items-center gap-3"><div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-sm font-bold text-slate-700">{index + 1}</div><div className="min-w-0"><p className="truncate text-sm font-bold text-slate-900">عضو الفريق {index + 1}</p><p className="truncate text-xs text-slate-400">{member.user_id}</p></div></div>
-                  <div className="flex items-center gap-2"><span className="rounded-full bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-600">{roleName(member.role_key, member.role)}</span><button type="button" disabled={!canManage} className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-600 disabled:opacity-40">تعديل الصلاحيات</button></div>
-                </div>
-              ))}
-            </div>
-          </section>
-
-          <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
-            <h3 className="font-bold text-slate-950">معاينة نموذج الصلاحيات</h3>
-            <p className="mt-1 text-sm leading-6 text-slate-500">اختر دورًا وصلاحية لرؤية طريقة بناء النظام. التخصيص النهائي يكون على مستوى العضو والنطاق.</p>
-            <label className="mt-6 block"><span className="mb-2 block text-sm font-semibold text-slate-700">الدور</span><select className="input" value={selectedRole} onChange={(e) => setSelectedRole(e.target.value)}>{roles.map(([key, name]) => <option key={key} value={key}>{name}</option>)}</select></label>
-            <label className="mt-5 block"><span className="mb-2 block text-sm font-semibold text-slate-700">الصلاحية</span><select className="input" value={selectedPermission} onChange={(e) => setSelectedPermission(e.target.value)}>{permissions.map(([key, name]) => <option key={key} value={key}>{name}</option>)}</select></label>
-            <div className="mt-5 rounded-2xl bg-slate-50 p-5 text-sm leading-7"><p className="font-bold text-slate-900">النطاق</p><div className="mt-3 flex flex-wrap gap-2">{["الشركة","الكيان القانوني","الفرع","القسم","مركز التكلفة","المنطقة","المنتج","المشروع"].map((scope) => <span key={scope} className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-600">{scope}</span>)}</div></div>
-            <div className="mt-5 rounded-2xl border border-blue-100 bg-blue-50 p-5 text-sm leading-7 text-blue-900"><p className="font-bold">فصل المهام</p><p className="mt-1">من ينشئ الميزانية لا يصبح تلقائيًا صاحب صلاحية اعتمادها. الاعتماد والقفل إجراءات مستقلة ومسجلة.</p></div>
-          </section>
-        </div>
-      </section>
-    </main>
-  );
+export default function TeamPage(){
+ const supabase=getSupabaseBrowserClient();
+ const [members,setMembers]=useState<Member[]>([]); const [canManage,setCanManage]=useState(false); const [error,setError]=useState(""); const [busy,setBusy]=useState(false); const [showInvite,setShowInvite]=useState(false); const [email,setEmail]=useState(""); const [inviteRole,setInviteRole]=useState("viewer"); const [editing,setEditing]=useState<Member|null>(null); const [saving,setSaving]=useState(false);
+ const orgId=()=>typeof window!=="undefined"?window.sessionStorage.getItem("activeOrganizationId"):null;
+ async function load(){const id=orgId();if(!id)return;setError("");const {data,error:e}=await supabase.rpc("get_team_members",{p_organization_id:id});if(e){setError(e.message);return;}setMembers((data??[]) as Member[]);const {data:p}=await supabase.rpc("has_org_permission",{p_organization_id:id,p_permission_key:"manage_users"});setCanManage(Boolean(p));}
+ useEffect(()=>{void load();},[]);
+ async function invite(){const id=orgId();if(!id||!email.trim())return;setBusy(true);setError("");try{const {data:{session}}=await supabase.auth.getSession();if(!session)throw new Error("انتهت جلسة الدخول");const {data:base}=supabase.storage.from("company-profile");void base;const fn=`${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/invite-team-member`;const r=await fetch(fn,{method:"POST",headers:{Authorization:`Bearer ${session.access_token}`,"Content-Type":"application/json"},body:JSON.stringify({organization_id:id,email:email.trim(),role_key:inviteRole})});const d=await r.json();if(!r.ok)throw new Error(d.error||"تعذر إرسال الدعوة");setEmail("");setShowInvite(false);await load();}catch(e){setError(e instanceof Error?e.message:"تعذر إرسال الدعوة");}finally{setBusy(false);}}
+ async function changeRole(){if(!editing)return;const id=orgId();if(!id)return;setSaving(true);setError("");const {error:e}=await supabase.rpc("set_team_member_role",{p_organization_id:id,p_user_id:editing.user_id,p_role_key:editing.role_key});setSaving(false);if(e){setError(e.message);return;}setEditing(null);await load();}
+ async function togglePermission(permission:string,granted:boolean){if(!editing)return;const id=orgId();if(!id)return;const {error:e}=await supabase.rpc("set_team_member_permission_override",{p_organization_id:id,p_user_id:editing.user_id,p_permission_key:permission,p_granted:granted});if(e){setError(e.message);return;}setEditing({...editing,overrides:{...editing.overrides,[permission]:granted}});await load();}
+ async function removeMember(userId:string){const id=orgId();if(!id||!confirm("هل تريد إزالة هذا العضو من الشركة؟"))return;setSaving(true);const {error:e}=await supabase.rpc("remove_team_member",{p_organization_id:id,p_user_id:userId});setSaving(false);if(e){setError(e.message);return;}setEditing(null);await load();}
+ const roleName=(key:string)=>roles.find(([r])=>r===key)?.[1]??key;
+ return <main className="min-h-screen bg-[#f7f8fa] text-[#172033]" dir="rtl"><header className="border-b border-slate-200 bg-white"><div className="mx-auto flex max-w-[1500px] items-center justify-between px-4 py-4 sm:px-6 lg:px-8"><Link href="/workspace" className="text-sm font-semibold text-slate-500">العودة لمساحة العمل</Link><div className="text-right"><p className="text-xs font-bold tracking-[.14em] text-slate-400">IDENTITY & ACCESS</p><h1 className="mt-1 font-bold text-slate-950">الفريق والصلاحيات</h1></div></div></header>
+ <section className="mx-auto max-w-[1500px] px-4 py-7 sm:px-6 lg:px-8"><div className="flex flex-col gap-5 border-b border-slate-200 pb-7 lg:flex-row lg:items-end lg:justify-between"><div className="max-w-3xl"><p className="text-xs font-bold text-slate-400">RBAC · TEAM · LEAST PRIVILEGE</p><h2 className="mt-2 text-2xl font-bold text-slate-950 sm:text-3xl">إدارة أعضاء الشركة والصلاحيات</h2><p className="mt-3 text-sm leading-7 text-slate-500">الدور يحدد الصلاحيات الأساسية، ويمكن إضافة استثناءات محددة للعضو. الاعتماد والقفل وصلاحيات إدارة المستخدمين مستقلة ولا تُمنح تلقائيًا للجميع.</p></div><button disabled={!canManage} onClick={()=>setShowInvite(true)} className="w-full rounded-xl bg-slate-950 px-5 py-3.5 text-sm font-bold text-white disabled:opacity-40 sm:w-auto">دعوة عضو جديد</button></div>
+ {error&&<div className="mt-6 rounded-xl border border-red-200 bg-red-50 p-4 text-sm font-semibold text-red-700">{error}</div>}
+ <div className="mt-7 grid gap-4 sm:grid-cols-3"><Stat label="أعضاء الشركة" value={members.length}/><Stat label="الأدوار" value={roles.length}/><Stat label="الصلاحيات" value={permissions.length}/></div>
+ <section className="mt-6 rounded-3xl border border-slate-200 bg-white shadow-sm"><div className="border-b border-slate-200 p-5 sm:p-6"><h3 className="font-bold text-slate-950">أعضاء الشركة</h3><p className="mt-1 text-sm text-slate-500">كل عضو مرتبط بالشركة الحالية فقط.</p></div><div className="divide-y divide-slate-100">{members.map(m=><div key={m.user_id} className="flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between"><div><p className="font-bold text-slate-900">{m.email||"مستخدم بدون بريد ظاهر"}</p><p className="mt-1 text-xs text-slate-400">{m.user_id}</p></div><div className="flex flex-wrap items-center gap-2"><span className="rounded-full bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-600">{roleName(m.role_key)}</span>{Object.entries(m.overrides).length>0&&<span className="rounded-full bg-blue-50 px-3 py-1.5 text-xs font-semibold text-blue-700">استثناءات مخصصة</span>}<button disabled={!canManage} onClick={()=>setEditing(m)} className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-semibold disabled:opacity-40">إدارة الصلاحيات</button></div></div>)}</div></section>
+ </section>
+ {showInvite&&<Modal title="دعوة عضو جديد" onClose={()=>setShowInvite(false)}><label className="block"><span className="mb-2 block text-sm font-semibold">البريد الإلكتروني</span><input className="input" type="email" value={email} onChange={e=>setEmail(e.target.value)} placeholder="name@company.com"/></label><label className="mt-5 block"><span className="mb-2 block text-sm font-semibold">الدور</span><select className="input" value={inviteRole} onChange={e=>setInviteRole(e.target.value)}>{roles.map(([k,n,d])=><option key={k} value={k}>{n} — {d}</option>)}</select></label><button disabled={busy||!email.trim()} onClick={()=>void invite()} className="mt-6 w-full rounded-xl bg-slate-950 px-5 py-3.5 text-sm font-bold text-white disabled:opacity-40">{busy?"جارٍ إرسال الدعوة…":"إرسال الدعوة"}</button></Modal>}
+ {editing&&<Modal title="إدارة صلاحيات العضو" onClose={()=>setEditing(null)}><p className="font-bold">{editing.email}</p><label className="mt-5 block"><span className="mb-2 block text-sm font-semibold">الدور الأساسي</span><select className="input" value={editing.role_key} onChange={e=>setEditing({...editing,role_key:e.target.value})}>{roles.map(([k,n,d])=><option key={k} value={k}>{n} — {d}</option>)}</select></label><button disabled={saving} onClick={()=>void changeRole()} className="mt-4 w-full rounded-xl border border-slate-300 px-5 py-3 text-sm font-bold">حفظ الدور</button><div className="mt-6 border-t pt-5"><p className="font-bold">استثناءات الصلاحيات</p><p className="mt-1 text-xs leading-6 text-slate-500">هذه الاستثناءات تتغلب على صلاحية الدور لهذا العضو فقط.</p><div className="mt-4 grid gap-2 sm:grid-cols-2">{permissions.map(([k,n])=><label key={k} className="flex items-center justify-between rounded-xl border border-slate-200 p-3 text-sm"><span>{n}</span><input type="checkbox" checked={editing.overrides[k]===true} onChange={e=>void togglePermission(k,e.target.checked)}/></label>)}</div></div><button disabled={saving} onClick={()=>void removeMember(editing.user_id)} className="mt-6 w-full rounded-xl border border-red-200 px-5 py-3 text-sm font-bold text-red-700">إزالة العضو من الشركة</button></Modal>}
+ </main>;
 }
-
-function Stat({ label, value }: { label: string; value: number }) {
-  return <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"><p className="text-xs text-slate-500">{label}</p><p className="mt-2 text-3xl font-bold text-slate-950">{value}</p></div>;
-}
+function Stat({label,value}:{label:string;value:number}){return <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"><p className="text-xs text-slate-500">{label}</p><p className="mt-2 text-3xl font-bold text-slate-950">{value}</p></div>}
+function Modal({title,onClose,children}:{title:string;onClose:()=>void;children:React.ReactNode}){return <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 p-4"><div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-3xl bg-white p-6 shadow-2xl sm:p-8"><div className="flex items-center justify-between"><h3 className="text-xl font-bold text-slate-950">{title}</h3><button onClick={onClose} className="rounded-lg px-3 py-2 text-slate-500">إغلاق</button></div><div className="mt-6">{children}</div></div></div>}
