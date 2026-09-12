@@ -14,6 +14,7 @@ const modules = [
   { title: "السيناريوهات", text: "اختبار أثر القرارات والافتراضات قبل اعتمادها.", href: "/workspace/scenarios" },
   { title: "التحليل المالي", text: "مؤشرات الربحية والنمو والاتجاهات من البيانات الفعلية المنشورة.", href: "/workspace/financial-analysis" },
   { title: "القوائم المالية", text: "عرض قائمة الدخل والميزانية من البيانات الفعلية المنشورة.", href: "/workspace/financial-statements" },
+  { title: "المحلل المالي الذكي", text: "تفسير المؤشرات والقوائم المالية بلغة عملية دون تغيير البيانات أو الحسابات.", href: "/workspace/ai-analyst" },
 ];
 
 const navigation = [
