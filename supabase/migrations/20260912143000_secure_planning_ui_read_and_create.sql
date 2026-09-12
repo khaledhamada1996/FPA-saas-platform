@@ -5,7 +5,7 @@ begin
  if v_user is null then raise exception 'Authentication required'; end if;
  if not exists(select 1 from public.organization_members m where m.organization_id=p_organization_id and m.user_id=v_user) then raise exception 'Not authorized'; end if;
  select jsonb_build_object(
-   'versions', coalesce((select jsonb_agg(to_jsonb(v) order by v.created_at desc) from public.planning_versions v where v.organization_id=p_organization_id),'[]'::jsonb),
+   'versions', coalesce((select jsonb_agg(jsonb_build_object('version',to_jsonb(v),'steps',coalesce((select jsonb_agg(to_jsonb(s) order by s.step_order) from public.planning_version_approval_steps s where s.planning_version_id=v.id),'[]'::jsonb)) order by v.created_at desc) from public.planning_versions v where v.organization_id=p_organization_id),'[]'::jsonb),
    'notifications', coalesce((select jsonb_agg(to_jsonb(n) order by n.created_at desc) from public.notifications n where n.organization_id=p_organization_id and n.recipient_user_id=v_user and n.read_at is null),'[]'::jsonb)
  ) into v_result;
  return v_result;
