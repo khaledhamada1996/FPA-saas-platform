@@ -58,6 +58,9 @@ export default function NewCompanyPage() {
       if (rpcError) throw rpcError;
       if (!data) throw new Error("تعذر إنشاء الشركة.");
 
+      const { error: permissionError } = await supabase.rpc("initialize_company_admin_permissions", { p_organization_id: String(data) });
+      if (permissionError) throw permissionError;
+
       window.sessionStorage.setItem("activeOrganizationId", String(data));
       router.replace("/workspace");
     } catch (caught) {
@@ -76,22 +79,10 @@ export default function NewCompanyPage() {
         </header>
 
         <section className="mx-auto max-w-3xl py-8 sm:py-12 lg:py-16">
-          <div className="mb-8">
-            <p className="text-xs font-bold tracking-[0.14em] text-slate-400">COMPANY SETUP</p>
-            <h1 className="mt-3 text-3xl font-bold tracking-tight text-slate-950 sm:text-4xl">أنشئ مساحة الشركة</h1>
-            <p className="mt-3 text-sm leading-7 text-slate-500 sm:text-base">حدد الشركة الأم إذا كانت هذه الشركة تابعة لمجموعة أو شركة أخرى.</p>
-          </div>
+          <div className="mb-8"><p className="text-xs font-bold tracking-[0.14em] text-slate-400">COMPANY SETUP</p><h1 className="mt-3 text-3xl font-bold tracking-tight text-slate-950 sm:text-4xl">أنشئ مساحة الشركة</h1><p className="mt-3 text-sm leading-7 text-slate-500 sm:text-base">حدد الشركة الأم إذا كانت هذه الشركة تابعة لمجموعة أو شركة أخرى.</p></div>
 
           <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-8">
-            <div className="mb-6 rounded-2xl border border-slate-200 bg-slate-50 p-4">
-              <label className="block"><span className="mb-2 block text-sm font-semibold text-slate-700">الشركة الأم</span>
-                <select className="input" value={parentId ?? ""} onChange={(e) => setParentId(e.target.value || null)} disabled={loadingParents}>
-                  <option value="">شركة مستقلة / شركة أم</option>
-                  {parentCompanies.map((company) => <option key={company.id} value={company.id}>{company.name}</option>)}
-                </select>
-              </label>
-              <p className="mt-2 text-xs leading-5 text-slate-400">اختيار شركة هنا يجعل الشركة الجديدة تظهر تحتها مباشرة في شجرة المجموعة. الصلاحيات النهائية يتحقق منها الخادم.</p>
-            </div>
+            <div className="mb-6 rounded-2xl border border-slate-200 bg-slate-50 p-4"><label className="block"><span className="mb-2 block text-sm font-semibold text-slate-700">الشركة الأم</span><select className="input" value={parentId ?? ""} onChange={(e) => setParentId(e.target.value || null)} disabled={loadingParents}><option value="">شركة مستقلة / شركة أم</option>{parentCompanies.map((company) => <option key={company.id} value={company.id}>{company.name}</option>)}</select></label><p className="mt-2 text-xs leading-5 text-slate-400">اختيار شركة هنا يجعل الشركة الجديدة تظهر تحتها مباشرة في شجرة المجموعة. الصلاحيات النهائية يتحقق منها الخادم.</p></div>
 
             <div className="grid gap-5 sm:grid-cols-2">
               <Field label="اسم الشركة *"><input className="input" value={name} onChange={(e) => setName(e.target.value)} placeholder="مثال: شركة القائد للتجارة" autoFocus /></Field>
@@ -104,12 +95,7 @@ export default function NewCompanyPage() {
 
             {error && <div className="mt-6 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm leading-6 text-red-700" role="alert">{error}</div>}
 
-            <div className="mt-8 border-t border-slate-100 pt-6">
-              <button type="button" disabled={saving} onClick={() => void createCompany()} className="w-full rounded-xl bg-slate-950 px-6 py-4 text-sm font-bold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60">
-                {saving ? "جارٍ إنشاء الشركة…" : parentId ? "إنشاء الشركة التابعة والدخول إليها" : "إنشاء الشركة والدخول إليها"}
-              </button>
-              <p className="mt-3 text-center text-xs leading-5 text-slate-400">سيتم تسجيلك كمسؤول عن الشركة الجديدة، ويمكنك لاحقًا إدارة فريقها وصلاحياته وفق الهيكل التنظيمي.</p>
-            </div>
+            <div className="mt-8 border-t border-slate-100 pt-6"><button type="button" disabled={saving} onClick={() => void createCompany()} className="w-full rounded-xl bg-slate-950 px-6 py-4 text-sm font-bold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60">{saving ? "جارٍ إنشاء الشركة…" : parentId ? "إنشاء الشركة التابعة والدخول إليها" : "إنشاء الشركة والدخول إليها"}</button><p className="mt-3 text-center text-xs leading-5 text-slate-400">سيتم تسجيلك كمسؤول عن الشركة الجديدة، ويمكنك لاحقًا إدارة فريقها وصلاحياته وفق الهيكل التنظيمي.</p></div>
           </section>
         </section>
       </div>
@@ -117,6 +103,4 @@ export default function NewCompanyPage() {
   );
 }
 
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
-  return <label className="block"><span className="mb-2 block text-sm font-semibold text-slate-700">{label}</span>{children}</label>;
-}
+function Field({ label, children }: { label: string; children: React.ReactNode }) { return <label className="block"><span className="mb-2 block text-sm font-semibold text-slate-700">{label}</span>{children}</label>; }
