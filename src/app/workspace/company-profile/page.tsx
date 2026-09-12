@@ -1,125 +1,26 @@
 "use client";
-
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
-
-const months = ["يناير", "فبراير", "مارس", "أبريل", "مايو", "يونيو", "يوليو", "أغسطس", "سبتمبر", "أكتوبر", "نوفمبر", "ديسمبر"];
-
-type Profile = {
-  id: string;
-  name: string;
-  legal_name: string | null;
-  industry: string | null;
-  company_size: string | null;
-  country: string | null;
-  city: string | null;
-  address: string | null;
-  tax_id: string | null;
-  registration_number: string | null;
-  website: string | null;
-  contact_email: string | null;
-  contact_phone: string | null;
-  base_currency: string;
-  fiscal_year_start_month: number;
-};
-
-export default function CompanyProfilePage() {
-  const router = useRouter();
-  const [profile, setProfile] = useState<Profile | null>(null);
-  const [form, setForm] = useState<Record<string, string>>({});
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState("");
-  const [saved, setSaved] = useState(false);
-
-  useEffect(() => {
-    let active = true;
-    async function load() {
-      const supabase = getSupabaseBrowserClient();
-      const { data: userData } = await supabase.auth.getUser();
-      if (!userData.user) {
-        router.replace("/login?next=/workspace/company-profile");
-        return;
-      }
-      const organizationId = window.sessionStorage.getItem("activeOrganizationId");
-      if (!organizationId) {
-        router.replace("/start");
-        return;
-      }
-      const { data, error: rpcError } = await supabase.rpc("get_organization_context", { p_organization_id: organizationId });
-      if (rpcError) {
-        if (active) setError(rpcError.message);
-        setLoading(false);
-        return;
-      }
-      const next = data as Profile;
-      if (!active) return;
-      setProfile(next);
-      setForm({
-        name: next.name ?? "", legal_name: next.legal_name ?? "", industry: next.industry ?? "", company_size: next.company_size ?? "",
-        country: next.country ?? "", city: next.city ?? "", address: next.address ?? "", tax_id: next.tax_id ?? "",
-        registration_number: next.registration_number ?? "", website: next.website ?? "", contact_email: next.contact_email ?? "",
-        contact_phone: next.contact_phone ?? "", base_currency: next.base_currency ?? "SAR", fiscal_year_start_month: String(next.fiscal_year_start_month ?? 1),
-      });
-      setLoading(false);
-    }
-    void load();
-    return () => { active = false; };
-  }, [router]);
-
-  function setField(key: string, value: string) {
-    setSaved(false);
-    setForm((current) => ({ ...current, [key]: value }));
-  }
-
-  async function save() {
-    const organizationId = window.sessionStorage.getItem("activeOrganizationId");
-    if (!organizationId || !form.name?.trim()) {
-      setError("اسم الشركة مطلوب.");
-      return;
-    }
-    setSaving(true); setError(""); setSaved(false);
-    const { error: rpcError } = await getSupabaseBrowserClient().rpc("update_company_profile", {
-      p_organization_id: organizationId,
-      p_name: form.name.trim(), p_legal_name: form.legal_name, p_industry: form.industry, p_company_size: form.company_size,
-      p_country: form.country, p_city: form.city, p_address: form.address, p_tax_id: form.tax_id,
-      p_registration_number: form.registration_number, p_website: form.website, p_contact_email: form.contact_email,
-      p_contact_phone: form.contact_phone, p_base_currency: form.base_currency, p_fiscal_year_start_month: Number(form.fiscal_year_start_month),
-    });
-    setSaving(false);
-    if (rpcError) { setError(rpcError.message); return; }
-    setSaved(true);
-    setProfile((current) => current ? { ...current, ...form, fiscal_year_start_month: Number(form.fiscal_year_start_month), base_currency: form.base_currency } as Profile : current);
-  }
-
-  if (loading) return <main className="min-h-screen bg-[#f7f8fa] p-6 text-[#172033]" dir="rtl"><div className="mx-auto max-w-4xl rounded-2xl border border-slate-200 bg-white p-10 text-center">جارٍ تحميل ملف الشركة…</div></main>;
-  if (!profile) return <main className="min-h-screen bg-[#f7f8fa] p-6 text-[#172033]" dir="rtl"><div className="mx-auto max-w-3xl rounded-2xl border border-red-200 bg-red-50 p-8 text-center text-red-800">{error || "تعذر تحميل ملف الشركة."}</div></main>;
-
-  return <main className="min-h-screen bg-[#f7f8fa] text-[#172033]" dir="rtl">
-    <header className="border-b border-slate-200 bg-white"><div className="mx-auto flex max-w-[1500px] items-center justify-between gap-4 px-4 py-4 sm:px-6 lg:px-8"><Link href="/workspace" className="text-sm font-semibold text-slate-500 hover:text-slate-950">العودة لمساحة العمل</Link><div className="text-right"><p className="text-[10px] font-bold tracking-[0.14em] text-slate-400">COMPANY PROFILE</p><h1 className="mt-1 text-base font-bold text-slate-950 sm:text-lg">ملف الشركة</h1></div></div></header>
-    <section className="mx-auto max-w-5xl px-4 py-7 sm:px-6 sm:py-10 lg:px-8"><div className="border-b border-slate-200 pb-7"><p className="text-xs font-bold text-slate-400">إعدادات الشركة</p><h2 className="mt-2 text-2xl font-bold text-slate-950 sm:text-3xl">ملف الشركة والبيانات الأساسية</h2><p className="mt-3 max-w-3xl text-sm leading-7 text-slate-500 sm:text-base">يمكنك تعديل بيانات الشركة في أي وقت. عند وجود أكثر من شركة، يتم حفظ هذه البيانات لكل شركة بشكل مستقل.</p></div>
-      {error && <div className="mt-5 rounded-xl border border-red-200 bg-red-50 p-4 text-sm font-semibold text-red-700">{error}</div>}
-      {saved && <div className="mt-5 rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm font-semibold text-emerald-700">تم حفظ ملف الشركة بنجاح.</div>}
-      <section className="mt-6 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-7"><div className="grid gap-5 sm:grid-cols-2">
-        <Field label="اسم الشركة *"><input className="input" value={form.name ?? ""} onChange={(e) => setField("name", e.target.value)} /></Field>
-        <Field label="الاسم القانوني"><input className="input" value={form.legal_name ?? ""} onChange={(e) => setField("legal_name", e.target.value)} /></Field>
-        <Field label="النشاط / القطاع"><input className="input" value={form.industry ?? ""} onChange={(e) => setField("industry", e.target.value)} /></Field>
-        <Field label="حجم الشركة"><select className="input" value={form.company_size ?? ""} onChange={(e) => setField("company_size", e.target.value)}><option value="">غير محدد</option><option value="micro">متناهية الصغر</option><option value="small">صغيرة</option><option value="medium">متوسطة</option><option value="large">كبيرة</option></select></Field>
-        <Field label="الدولة"><input className="input" value={form.country ?? ""} onChange={(e) => setField("country", e.target.value)} /></Field>
-        <Field label="المدينة"><input className="input" value={form.city ?? ""} onChange={(e) => setField("city", e.target.value)} /></Field>
-        <Field label="العنوان"><input className="input" value={form.address ?? ""} onChange={(e) => setField("address", e.target.value)} /></Field>
-        <Field label="الرقم الضريبي"><input className="input" value={form.tax_id ?? ""} onChange={(e) => setField("tax_id", e.target.value)} /></Field>
-        <Field label="رقم السجل التجاري"><input className="input" value={form.registration_number ?? ""} onChange={(e) => setField("registration_number", e.target.value)} /></Field>
-        <Field label="الموقع الإلكتروني"><input className="input" value={form.website ?? ""} onChange={(e) => setField("website", e.target.value)} /></Field>
-        <Field label="البريد الإلكتروني"><input className="input" type="email" value={form.contact_email ?? ""} onChange={(e) => setField("contact_email", e.target.value)} /></Field>
-        <Field label="رقم التواصل"><input className="input" value={form.contact_phone ?? ""} onChange={(e) => setField("contact_phone", e.target.value)} /></Field>
-        <Field label="العملة الأساسية"><select className="input" value={form.base_currency ?? "SAR"} onChange={(e) => setField("base_currency", e.target.value)}><option value="SAR">ريال سعودي (SAR)</option><option value="AED">درهم إماراتي (AED)</option><option value="USD">دولار أمريكي (USD)</option><option value="EGP">جنيه مصري (EGP)</option><option value="KWD">دينار كويتي (KWD)</option><option value="BHD">دينار بحريني (BHD)</option><option value="QAR">ريال قطري (QAR)</option><option value="OMR">ريال عماني (OMR)</option></select></Field>
-        <Field label="بداية السنة المالية"><select className="input" value={form.fiscal_year_start_month ?? "1"} onChange={(e) => setField("fiscal_year_start_month", e.target.value)}>{months.map((month, index) => <option key={month} value={index + 1}>{month}</option>)}</select></Field>
-      </div><div className="mt-7 border-t border-slate-100 pt-6"><button type="button" disabled={saving} onClick={() => void save()} className="w-full rounded-xl bg-slate-950 px-6 py-4 text-sm font-bold text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto">{saving ? "جارٍ الحفظ…" : "حفظ التعديلات"}</button></div></section>
-    </section>
-  </main>;
+const months=["يناير","فبراير","مارس","أبريل","مايو","يونيو","يوليو","أغسطس","سبتمبر","أكتوبر","نوفمبر","ديسمبر"];
+type Profile={id:string;name:string;legal_name:string|null;industry:string|null;company_size:string|null;country:string|null;city:string|null;address:string|null;tax_id:string|null;registration_number:string|null;website:string|null;contact_email:string|null;contact_phone:string|null;base_currency:string;fiscal_year_start_month:number;parent_organization_id:string|null};
+type Context={organization:Profile;parent:{id:string;name:string}|null;children:Array<{id:string;name:string;legal_name:string|null;base_currency:string;country:string|null}>};
+export default function CompanyProfilePage(){
+ const router=useRouter(); const [context,setContext]=useState<Context|null>(null); const [form,setForm]=useState<Record<string,string>>({}); const [child,setChild]=useState({name:"",currency:"SAR",month:"1"}); const [loading,setLoading]=useState(true); const [saving,setSaving]=useState(false); const [adding,setAdding]=useState(false); const [error,setError]=useState(""); const [saved,setSaved]=useState(false);
+ async function load(){const s=getSupabaseBrowserClient();const {data:u}=await s.auth.getUser();if(!u.user){router.replace("/login?next=/workspace/company-profile");return;}const id=window.sessionStorage.getItem("activeOrganizationId");if(!id){router.replace("/start");return;}const {data,error:e}=await s.rpc("get_organization_context",{p_organization_id:id});if(e){setError(e.message);setLoading(false);return;}const c=e as Context;setContext(c);const p=c.organization;setForm({name:p.name??"",legal_name:p.legal_name??"",industry:p.industry??"",company_size:p.company_size??"",country:p.country??"",city:p.city??"",address:p.address??"",tax_id:p.tax_id??"",registration_number:p.registration_number??"",website:p.website??"",contact_email:p.contact_email??"",contact_phone:p.contact_phone??"",base_currency:p.base_currency??"SAR",fiscal_year_start_month:String(p.fiscal_year_start_month??1)});setLoading(false);}
+ useEffect(()=>{void load();},[router]);
+ function setField(k:string,v:string){setSaved(false);setForm(x=>({...x,[k]:v}));}
+ async function save(){const id=window.sessionStorage.getItem("activeOrganizationId");if(!id||!form.name.trim()){setError("اسم الشركة مطلوب.");return;}setSaving(true);setError("");const {error:e}=await getSupabaseBrowserClient().rpc("update_company_profile",{p_organization_id:id,p_name:form.name.trim(),p_legal_name:form.legal_name,p_industry:form.industry,p_company_size:form.company_size,p_country:form.country,p_city:form.city,p_address:form.address,p_tax_id:form.tax_id,p_registration_number:form.registration_number,p_website:form.website,p_contact_email:form.contact_email,p_contact_phone:form.contact_phone,p_base_currency:form.base_currency,p_fiscal_year_start_month:Number(form.fiscal_year_start_month)});setSaving(false);if(e){setError(e.message);return;}setSaved(true);await load();}
+ async function addChild(){const parent=window.sessionStorage.getItem("activeOrganizationId");if(!parent||!child.name.trim()){setError("اكتب اسم الشركة التابعة.");return;}setAdding(true);setError("");const {data,error:e}=await getSupabaseBrowserClient().rpc("create_child_company",{p_parent_organization_id:parent,p_name:child.name.trim(),p_base_currency:child.currency,p_fiscal_year_start_month:Number(child.month),p_company_profile:{}});setAdding(false);if(e){setError(e.message);return;}setChild({name:"",currency:"SAR",month:"1"});await load();if(data){window.sessionStorage.setItem("activeOrganizationId",data);router.push("/workspace/company-profile");}}
+ if(loading)return <main className="min-h-screen bg-[#f7f8fa] p-6" dir="rtl"><div className="mx-auto max-w-5xl rounded-2xl border bg-white p-10 text-center">جارٍ تحميل ملف الشركة…</div></main>;
+ if(!context)return <main className="min-h-screen bg-[#f7f8fa] p-6" dir="rtl"><div className="mx-auto max-w-3xl rounded-2xl border border-red-200 bg-red-50 p-8 text-center text-red-800">{error||"تعذر تحميل ملف الشركة."}</div></main>;
+ const p=context.organization;
+ return <main className="min-h-screen bg-[#f7f8fa] text-[#172033]" dir="rtl"><header className="border-b border-slate-200 bg-white"><div className="mx-auto flex max-w-[1500px] items-center justify-between px-4 py-4 sm:px-6 lg:px-8"><Link href="/workspace" className="text-sm font-semibold text-slate-500">العودة لمساحة العمل</Link><div className="text-right"><p className="text-[10px] font-bold tracking-[.14em] text-slate-400">COMPANY PROFILE</p><h1 className="mt-1 font-bold text-slate-950">ملف الشركة وهيكل المجموعة</h1></div></div></header><section className="mx-auto max-w-6xl px-4 py-7 sm:px-6 lg:px-8">{error&&<div className="mb-5 rounded-xl border border-red-200 bg-red-50 p-4 text-sm font-semibold text-red-700">{error}</div>}{saved&&<div className="mb-5 rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm font-semibold text-emerald-700">تم حفظ ملف الشركة.</div>}
+ <div className="border-b border-slate-200 pb-7"><p className="text-xs font-bold text-slate-400">إعدادات الشركة</p><h2 className="mt-2 text-2xl font-bold text-slate-950 sm:text-3xl">ملف الشركة والبيانات الأساسية</h2><p className="mt-3 max-w-4xl text-sm leading-7 text-slate-500">كل شركة لها ملف وبيانات مالية مستقلة. ويمكن للشركة الأم إدارة شركاتها التابعة ضمن هيكل المجموعة.</p></div>
+ {context.parent&&<div className="mt-6 rounded-2xl border border-blue-200 bg-blue-50 p-5"><p className="text-xs font-bold text-blue-700">الشركة الأم</p><p className="mt-1 font-bold text-blue-950">{context.parent.name}</p><p className="mt-1 text-sm text-blue-800">هذه الشركة تابعة للشركة الأم ويمكن لاحقًا استخدامها ضمن تقارير المجموعة والتوحيد.</p></div>}
+ <section className="mt-6 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-7"><div className="grid gap-5 sm:grid-cols-2">{[["name","اسم الشركة *"],["legal_name","الاسم القانوني"],["industry","النشاط / القطاع"],["country","الدولة"],["city","المدينة"],["address","العنوان"],["tax_id","الرقم الضريبي"],["registration_number","رقم السجل التجاري"],["website","الموقع الإلكتروني"],["contact_email","البريد الإلكتروني"],["contact_phone","رقم التواصل"]].map(([k,l])=><Field key={k} label={l}><input className="input" value={form[k]??""} onChange={e=>setField(k,e.target.value)}/></Field>)}<Field label="حجم الشركة"><select className="input" value={form.company_size??""} onChange={e=>setField("company_size",e.target.value)}><option value="">غير محدد</option><option value="micro">متناهية الصغر</option><option value="small">صغيرة</option><option value="medium">متوسطة</option><option value="large">كبيرة</option></select></Field><Field label="العملة الأساسية"><select className="input" value={form.base_currency??"SAR"} onChange={e=>setField("base_currency",e.target.value)}><option>SAR</option><option>USD</option><option>EUR</option><option>AED</option><option>EGP</option><option>KWD</option><option>QAR</option><option>BHD</option><option>OMR</option></select></Field><Field label="بداية السنة المالية"><select className="input" value={form.fiscal_year_start_month??"1"} onChange={e=>setField("fiscal_year_start_month",e.target.value)}>{months.map((m,i)=><option key={m} value={i+1}>{m}</option>)}</select></Field></div><div className="mt-7 border-t pt-6"><button disabled={saving} onClick={()=>void save()} className="w-full rounded-xl bg-slate-950 px-6 py-4 text-sm font-bold text-white sm:w-auto">{saving?"جارٍ الحفظ…":"حفظ التعديلات"}</button></div></section>
+ <section className="mt-6 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-7"><p className="text-xs font-bold text-slate-400">هيكل المجموعة</p><h3 className="mt-1 text-xl font-bold text-slate-950">الشركات التابعة</h3><p className="mt-2 text-sm leading-6 text-slate-500">إذا كانت هذه شركة أم وتمتلك شركات قانونية مستقلة في دول مختلفة، أضفها هنا. أما الفروع التابعة لنفس الشركة فتظل ضمن إدارة الفروع والكيانات القانونية.</p>{context.children.length>0&&<div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">{context.children.map(c=><button key={c.id} onClick={()=>{window.sessionStorage.setItem("activeOrganizationId",c.id);router.push("/workspace/company-profile")}} className="rounded-xl border border-slate-200 p-4 text-right hover:bg-slate-50"><p className="font-bold text-slate-900">{c.name}</p><p className="mt-1 text-xs text-slate-500">{c.country||"الدولة غير محددة"} · {c.base_currency}</p></button>)}</div>}{p.parent_organization_id===null&&<div className="mt-6 border-t pt-6"><p className="text-sm font-bold text-slate-900">إضافة شركة تابعة</p><div className="mt-4 grid gap-4 sm:grid-cols-3"><input className="input" placeholder="اسم الشركة التابعة" value={child.name} onChange={e=>setChild({...child,name:e.target.value})}/><select className="input" value={child.currency} onChange={e=>setChild({...child,currency:e.target.value})}><option>SAR</option><option>USD</option><option>EUR</option><option>AED</option><option>EGP</option><option>KWD</option><option>QAR</option><option>BHD</option><option>OMR</option></select><select className="input" value={child.month} onChange={e=>setChild({...child,month:e.target.value})}>{months.map((m,i)=><option key={m} value={i+1}>{m}</option>)}</select></div><button disabled={adding} onClick={()=>void addChild()} className="mt-4 w-full rounded-xl border border-slate-300 bg-white px-5 py-3 text-sm font-bold text-slate-900 sm:w-auto">{adding?"جارٍ إنشاء الشركة…":"إضافة شركة تابعة"}</button></div>}</section>
+ </section></main>;
 }
-
-function Field({ label, children }: { label: string; children: React.ReactNode }) { return <label className="block"><span className="mb-2 block text-sm font-semibold text-slate-700">{label}</span>{children}</label>; }
+function Field({label,children}:{label:string;children:React.ReactNode}){return <label className="block"><span className="mb-2 block text-sm font-semibold text-slate-700">{label}</span>{children}</label>}
