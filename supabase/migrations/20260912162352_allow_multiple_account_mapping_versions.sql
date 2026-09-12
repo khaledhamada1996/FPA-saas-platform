@@ -1,0 +1,1 @@
+alter table public.account_mappings drop constraint if exists account_mappings_organization_id_source_code_key;
