@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 
 const months = ["يناير", "فبراير", "مارس", "أبريل", "مايو", "يونيو", "يوليو", "أغسطس", "سبتمبر", "أكتوبر", "نوفمبر", "ديسمبر"];
@@ -10,7 +10,6 @@ type ParentCompany = { id: string; name: string; parent_organization_id: string 
 
 export default function NewCompanyPage() {
   const router = useRouter();
-  const searchParams = useSearchParams();
   const [name, setName] = useState("");
   const [legalName, setLegalName] = useState("");
   const [industry, setIndustry] = useState("");
@@ -24,7 +23,7 @@ export default function NewCompanyPage() {
   const [error, setError] = useState("");
 
   useEffect(() => {
-    const requestedParent = searchParams.get("parent");
+    const requestedParent = new URLSearchParams(window.location.search).get("parent");
     const supabase = getSupabaseBrowserClient();
     void supabase.rpc("get_my_workspaces").then(({ data }) => {
       const companies = (data ?? []) as ParentCompany[];
@@ -32,7 +31,7 @@ export default function NewCompanyPage() {
       setParentId(requestedParent && companies.some((company) => company.id === requestedParent) ? requestedParent : null);
       setLoadingParents(false);
     });
-  }, [searchParams]);
+  }, []);
 
   async function createCompany() {
     if (!name.trim()) {
@@ -53,12 +52,7 @@ export default function NewCompanyPage() {
         p_name: name.trim(),
         p_base_currency: currency,
         p_fiscal_year_start_month: Number(fiscalMonth),
-        p_company_profile: {
-          legal_name: legalName.trim(),
-          industry: industry.trim(),
-          city: city.trim(),
-          country: "السعودية",
-        },
+        p_company_profile: { legal_name: legalName.trim(), industry: industry.trim(), city: city.trim(), country: "السعودية" },
         p_parent_organization_id: parentId,
       });
       if (rpcError) throw rpcError;
