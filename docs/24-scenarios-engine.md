@@ -1,6 +1,6 @@
 # Scenarios Engine
 
-The MVP Scenarios Engine provides controlled what-if analysis over a planning version.
+The MVP Scenarios Engine provides controlled what-if analysis over an approved or draft budget/forecast planning version.
 
 ## Scenario types
 - what_if
@@ -9,7 +9,25 @@ The MVP Scenarios Engine provides controlled what-if analysis over a planning ve
 - stress
 
 ## Adjustments
-Each scenario can contain period/account adjustments using either an absolute value or percentage.
+Each scenario contains period/account adjustments using either:
+- `percentage`: percentage change applied to the base amount
+- `absolute`: SAR amount added to the base amount
+
+An account is required for each adjustment to keep the scenario calculation deterministic.
+
+## Results
+`get_scenario_results` calculates, from the selected budget or forecast version:
+- base and scenario revenue
+- base and scenario COGS
+- base and scenario gross profit
+- base and scenario operating expenses
+- base and scenario EBITDA
+- scenario finance cost
+- scenario tax
+- scenario net income
+- account-level base, adjustment, and scenario values
+
+The calculation follows the same account-type conventions used by the Financial Statements engine.
 
 ## Security
 - Organization isolation through RLS and `has_org_permission`.
@@ -21,4 +39,4 @@ Each scenario can contain period/account adjustments using either an absolute va
 ## UI
 `/workspace/scenarios`
 
-The current MVP UI creates scenarios and records adjustments. A later enhancement can calculate full statement-level scenario outputs from the selected base version and surface the resulting KPIs side-by-side.
+The UI requires a base budget/forecast version, allows controlled adjustments, and exposes calculated scenario KPIs plus account-level adjustments.
