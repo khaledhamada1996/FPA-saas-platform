@@ -59,3 +59,7 @@ Do not commit real credentials or secrets.
 ## Development Rule
 
 Documentation, domain rules, acceptance criteria, and architecture are approved before production implementation. Each vertical slice must preserve deployability, tenant isolation, authorization, auditability, and deterministic financial correctness.
+
+## Build Trigger
+
+Repository changes should remain minimal and deterministic so deployment providers can rebuild the application from the `main` branch without requiring manual repository changes.
