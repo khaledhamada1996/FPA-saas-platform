@@ -123,6 +123,8 @@ Material differences must prevent publish unless explicitly overridden by an aut
 
 Published imports must be reversible through a controlled operation that identifies the affected import and facts. Ordinary users must not delete individual published facts without governance controls.
 
+The MVP rollback operation is `public.rollback_actuals_import(p_import_id uuid, p_reason text)`. It requires an authenticated user with the organization `reject` permission and accepts only imports currently in `published` status. The operation locks the import and its published batch, removes only authoritative `actual` facts whose `source_import_id` matches the selected import and organization, marks the publish batch as `rejected`, changes the import status to `rolled_back`, and records an audit event containing the rollback reason and deleted-fact count. Source import rows/evidence are preserved. The operation is transactional so a failure does not leave a partial rollback. The RPC is exposed only to the `authenticated` role and runs as `SECURITY DEFINER` with an empty `search_path`.
+
 Rollback must create an audit event and preserve the original source evidence.
 
 ## 13. Mapping Hierarchy
