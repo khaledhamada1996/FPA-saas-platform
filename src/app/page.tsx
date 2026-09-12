@@ -17,8 +17,8 @@ export default function HomePage() {
             <div className="text-xs text-slate-500">التخطيط والتحليل المالي</div>
           </div>
           <div className="flex items-center gap-2 sm:gap-3">
-            <a href="/login" className="rounded-lg px-3 py-2 text-sm font-semibold text-slate-600 transition hover:bg-slate-50 hover:text-slate-950 sm:px-4">تسجيل الدخول</a>
-            <a href="/signup" className="rounded-lg bg-slate-950 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-800 sm:px-5">إنشاء حساب</a>
+            <a href="/login" className="rounded-lg bg-slate-950 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-800 sm:px-5">تسجيل الدخول</a>
+            <a href="/signup" className="rounded-lg px-3 py-2 text-sm font-semibold text-slate-600 transition hover:bg-slate-50 hover:text-slate-950 sm:px-4">إنشاء حساب</a>
           </div>
         </div>
       </header>
@@ -35,9 +35,9 @@ export default function HomePage() {
             <p className="mt-6 max-w-2xl text-base leading-8 text-slate-600 sm:mt-7 sm:text-lg sm:leading-9 lg:text-xl">
               منصة FP&A تساعد الإدارة على تنظيم البيانات المالية وبناء الميزانيات والتوقعات وتحليل الأداء واختبار السيناريوهات في مكان واحد.
             </p>
-            <div className="mt-8 flex flex-col items-stretch gap-3 sm:flex-row sm:items-center sm:gap-4">
-              <a href="/signup" className="inline-flex items-center justify-center rounded-xl bg-slate-950 px-7 py-3.5 text-sm font-bold text-white shadow-lg shadow-slate-900/10 transition hover:bg-slate-800 sm:px-8 sm:py-4 sm:text-base">ابدأ الآن</a>
-              <span className="text-center text-sm text-slate-500 sm:text-right">إنشاء حساب ثم إعداد مساحة العمل</span>
+            <div className="mt-8 flex flex-col items-stretch gap-3 sm:items-start">
+              <a href="/login" className="inline-flex items-center justify-center rounded-xl bg-slate-950 px-7 py-3.5 text-sm font-bold text-white shadow-lg shadow-slate-900/10 transition hover:bg-slate-800 sm:px-8 sm:py-4 sm:text-base">تسجيل الدخول</a>
+              <a href="/signup" className="text-center text-sm font-semibold text-slate-500 underline-offset-4 transition hover:text-slate-950 hover:underline sm:text-right">ليس لديك حساب؟ إنشاء حساب</a>
             </div>
           </div>
 
@@ -105,8 +105,11 @@ export default function HomePage() {
             ))}
           </div>
           <div className="mt-10 flex flex-col items-stretch justify-between gap-5 border-t border-slate-700 pt-7 sm:flex-row sm:items-center sm:gap-6 sm:pt-8">
-            <p className="max-w-xl text-sm leading-7 text-slate-400 sm:text-base">ابدأ بإنشاء حساب ثم أنشئ بيئة العمل، وبعدها ستظهر لك وحدات FP&A من داخل مساحة العمل.</p>
-            <a href="/signup" className="inline-flex items-center justify-center rounded-xl bg-white px-6 py-3.5 text-sm font-bold text-slate-950 transition hover:bg-slate-100 sm:px-7 sm:py-4">إنشاء حساب</a>
+            <p className="max-w-xl text-sm leading-7 text-slate-400 sm:text-base">لديك حساب بالفعل؟ سجّل الدخول للوصول إلى مساحة العمل. إذا لم يكن لديك حساب، يمكنك إنشاء حساب جديد.</p>
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+              <a href="/login" className="inline-flex items-center justify-center rounded-xl bg-white px-6 py-3.5 text-sm font-bold text-slate-950 transition hover:bg-slate-100 sm:px-7 sm:py-4">تسجيل الدخول</a>
+              <a href="/signup" className="inline-flex items-center justify-center rounded-xl border border-slate-600 px-6 py-3.5 text-sm font-semibold text-white transition hover:bg-slate-800 sm:px-7 sm:py-4">إنشاء حساب</a>
+            </div>
           </div>
         </div>
       </section>
