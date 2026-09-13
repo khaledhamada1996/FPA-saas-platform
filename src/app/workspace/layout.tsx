@@ -6,6 +6,7 @@ import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 
 const routePermissions: Array<[string, string]> = [
   ["/workspace/executive-dashboard", "screen.executive_dashboard.view"], ["/workspace/actuals", "screen.actuals.view"],
+  ["/workspace/data-monitoring/connectors", "screen.connector_management.view"], ["/workspace/data-monitoring", "screen.data_monitoring.view"],
   ["/workspace/data/history", "screen.data_history.view"], ["/workspace/data/accounts", "screen.accounts.view"], ["/workspace/data", "screen.data.view"],
   ["/workspace/trial-balance", "screen.trial_balance.view"], ["/workspace/financial-statements", "screen.financial_statements.view"],
   ["/workspace/financial-analysis", "screen.financial_analysis.view"], ["/workspace/budget", "screen.budget.view"], ["/workspace/forecast", "screen.forecast.view"],
