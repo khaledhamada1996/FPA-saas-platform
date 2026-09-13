@@ -33,6 +33,12 @@ export default function WorkspaceLayout({ children }: Readonly<{ children: React
       if (!data.user) { router.replace(`/login?next=${encodeURIComponent(pathname || "/workspace")}`); return; }
       const organizationId = window.sessionStorage.getItem("activeOrganizationId");
       if (!organizationId) { router.replace("/start"); return; }
+
+      const { data: onboarding, error: onboardingError } = await supabase.rpc("get_company_onboarding_status", { p_organization_id: organizationId });
+      if (onboardingError) { if (active) setStatus("denied"); router.replace("/start"); return; }
+      const setup = onboarding?.[0] as { completed?: boolean; next_route?: string } | undefined;
+      if (!setup?.completed) { router.replace("/onboarding"); return; }
+
       const { data: access, error } = await supabase.rpc("get_my_org_access", { p_organization_id: organizationId });
       if (error) { if (active) setStatus("denied"); router.replace(`/workspace/access-denied?reason=access-check`); return; }
       const requiredPermission = permissionForPath(pathname || "/workspace");
@@ -45,6 +51,6 @@ export default function WorkspaceLayout({ children }: Readonly<{ children: React
     return () => { active = false; listener.subscription.unsubscribe(); };
   }, [pathname, router]);
 
-  if (status !== "authenticated") return <main className="min-h-screen bg-[#f7f8fa] text-[#172033]" dir="rtl"><div className="mx-auto flex min-h-screen w-full max-w-3xl items-center justify-center px-4 py-10 sm:px-6"><div className="w-full rounded-2xl border border-slate-200 bg-white p-7 text-center shadow-sm sm:p-10"><p className="text-xs font-bold tracking-[0.16em] text-slate-400">FP&A WORKSPACE</p><p className="mt-4 text-base font-semibold text-slate-800">{status === "denied" ? "جارٍ التحقق من صلاحية الوصول…" : "جارٍ التحقق من تسجيل الدخول والصلاحيات…"}</p></div></div></main>;
+  if (status !== "authenticated") return <main className="min-h-screen bg-[#f7f8fa] text-[#172033]" dir="rtl"><div className="mx-auto flex min-h-screen w-full max-w-3xl items-center justify-center px-4 py-10 sm:px-6"><div className="w-full rounded-2xl border border-slate-200 bg-white p-7 text-center shadow-sm sm:p-10"><p className="text-xs font-bold tracking-[0.16em] text-slate-400">FP&A WORKSPACE</p><p className="mt-4 text-base font-semibold text-slate-800">{status === "denied" ? "جارٍ التحقق من صلاحية الوصول…" : "جارٍ التحقق من تسجيل الدخول وإعداد الشركة والصلاحيات…"}</p></div></div></main>;
   return children;
 }
