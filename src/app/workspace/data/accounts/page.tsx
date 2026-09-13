@@ -60,17 +60,26 @@ export default function AccountsPage() {
     return q ? accounts.filter((a) => `${a.code} ${a.name}`.toLowerCase().includes(q)) : accounts;
   }, [accounts, query]);
 
-  const roots = filtered.filter((a) => !a.parent_account_id);
   const children = (parent: string | null) => filtered.filter((a) => a.parent_account_id === parent);
   const hasChildren = (accountId: string) => accounts.some((a) => a.parent_account_id === accountId);
 
-  function toggleExpanded(accountId: string) {
+  function expandLevel(accountId: string) {
+    if (!hasChildren(accountId)) return;
     setExpanded((current) => {
       const next = new Set(current);
-      if (next.has(accountId)) next.delete(accountId); else next.add(accountId);
-      setAllExpanded(false);
+      next.add(accountId);
       return next;
     });
+    setAllExpanded(false);
+  }
+
+  function collapseLevel(accountId: string) {
+    setExpanded((current) => {
+      const next = new Set(current);
+      next.delete(accountId);
+      return next;
+    });
+    setAllExpanded(false);
   }
 
   function expandAll() {
@@ -115,29 +124,45 @@ export default function AccountsPage() {
       return (
         <div key={account.id} className="relative">
           <div
-            className={`relative group flex items-center gap-3 border-b border-slate-100 px-4 py-3 hover:bg-slate-50 sm:px-5 ${isRoot ? "bg-slate-50 border-slate-200" : ""}`}
-            style={{ paddingRight: `${Math.max(1, account.level) * 28}px` }}
+            className={`relative group flex min-h-10 items-center gap-2 border-b border-slate-100 px-3 py-1.5 hover:bg-slate-50 sm:px-4 ${isRoot ? "bg-slate-50 border-slate-200" : ""}`}
+            style={{ paddingRight: `${Math.max(1, account.level) * 24}px` }}
           >
             <span className="pointer-events-none absolute right-0 top-1/2 h-px w-5 bg-slate-300" aria-hidden="true" />
-            <div className="relative z-10 flex w-7 shrink-0 items-center justify-center bg-white">
+            <div className="relative z-10 flex shrink-0 items-center gap-1 bg-white px-0.5">
               {accountHasChildren ? (
-                <button
-                  type="button"
-                  onClick={() => toggleExpanded(account.id)}
-                  aria-label={isExpanded ? `تقليص ${account.name}` : `فتح ${account.name}`}
-                  title={isExpanded ? "تقليص المستوى" : "فتح المستوى"}
-                  className="flex h-6 w-6 items-center justify-center rounded-md border border-slate-300 bg-white text-sm font-bold leading-none text-slate-700 hover:border-slate-500 hover:bg-slate-50"
-                >
-                  {isExpanded ? "−" : "+"}
-                </button>
-              ) : <span className="h-6 w-6" />}
+                <>
+                  <button
+                    type="button"
+                    onClick={() => expandLevel(account.id)}
+                    aria-label={`فتح المستوى التابع لـ ${account.name}`}
+                    title="فتح المستوى التالي"
+                    className="flex h-5 w-5 items-center justify-center rounded border border-slate-300 bg-white text-xs font-bold leading-none text-slate-700 hover:border-slate-500 hover:bg-slate-50"
+                  >
+                    +
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => collapseLevel(account.id)}
+                    aria-label={`تقليص المستوى التابع لـ ${account.name}`}
+                    title="تقليص المستوى التالي"
+                    className="flex h-5 w-5 items-center justify-center rounded border border-slate-300 bg-white text-xs font-bold leading-none text-slate-700 hover:border-slate-500 hover:bg-slate-50"
+                  >
+                    −
+                  </button>
+                </>
+              ) : <span className="w-[41px]" />}
             </div>
-            <span className={`relative z-10 flex h-7 w-7 shrink-0 items-center justify-center rounded-full border text-[10px] font-bold ${isRoot ? "border-slate-900 bg-slate-900 text-white" : "border-slate-200 bg-white text-slate-500"}`}>{account.level}</span>
-            <div className="min-w-0 flex-1">
-              <p className="font-semibold text-slate-900">{account.code} <span className="font-normal text-slate-600">— {account.name}</span></p>
-              <p className="mt-0.5 text-[11px] text-slate-400">{typeLabels[account.account_type ?? ""] ?? "غير مصنف"} · {statementLabels[account.statement_type ?? ""] ?? "غير مصنف"}</p>
+            <span className={`relative z-10 flex h-6 w-6 shrink-0 items-center justify-center rounded-full border text-[9px] font-bold ${isRoot ? "border-slate-900 bg-slate-900 text-white" : "border-slate-200 bg-white text-slate-500"}`}>{account.level}</span>
+            <div className="min-w-0 flex-1 flex items-center gap-3 leading-tight">
+              <p className="shrink-0 font-semibold text-[13px] text-slate-900">{account.code}</p>
+              <p className="min-w-0 font-medium text-[13px] text-slate-800">{account.name}</p>
+              <p className="hidden min-w-0 truncate text-[11px] text-slate-400 sm:block">
+                <span>{typeLabels[account.account_type ?? ""] ?? "غير مصنف"}</span>
+                <span className="mx-2 text-slate-300">·</span>
+                <span>{statementLabels[account.statement_type ?? ""] ?? "غير مصنف"}</span>
+              </p>
             </div>
-            <button type="button" onClick={() => editAccount(account)} className="relative z-10 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-bold text-slate-700 hover:bg-slate-100">تعديل</button>
+            <button type="button" onClick={() => editAccount(account)} className="relative z-10 shrink-0 rounded-md border border-slate-200 bg-white px-2.5 py-1 text-[11px] font-bold text-slate-700 hover:bg-slate-100">تعديل</button>
           </div>
           {accountHasChildren && isExpanded && account.level < 6 && renderTree(account.id)}
         </div>
@@ -163,18 +188,19 @@ export default function AccountsPage() {
         <div className="mt-6 grid gap-5 lg:grid-cols-[minmax(0,1fr)_380px]">
           <section className="order-2 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm lg:order-1">
             <div className="flex flex-col gap-3 border-b border-slate-200 p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5">
-              <div><h3 className="font-bold">شجرة دليل الحسابات</h3><p className="mt-1 text-xs text-slate-500">خط رأسي واحد يربط مستويات الدليل، مع + و − للتحكم في الفروع.</p></div>
+              <div><h3 className="font-bold">شجرة دليل الحسابات</h3><p className="mt-1 text-xs text-slate-500">+ يفتح مستوى واحد، − يقلص مستوى واحد، مع خط رأسي واحد يربط الشجرة بالكامل.</p></div>
               <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="ابحث بالكود أو اسم الحساب" className="h-10 w-full rounded-lg border border-slate-300 px-3 text-sm outline-none focus:border-slate-500 sm:max-w-xs" />
             </div>
 
             {loading ? <div className="p-8 text-sm text-slate-500">جارٍ تحميل دليل الحسابات…</div> : filtered.length ? (
               <div className="relative pr-5 sm:pr-7">
                 <div className="absolute right-3 top-0 bottom-0 w-px bg-slate-300 sm:right-5" aria-hidden="true" />
-                <div className="relative z-10 flex items-center gap-2 border-b border-slate-200 bg-white px-4 py-3 sm:px-5">
-                  <div className="flex w-7 shrink-0 items-center justify-center bg-white">
-                    <button type="button" onClick={allExpanded ? collapseAll : expandAll} aria-label={allExpanded ? "تقليص دليل الحسابات بالكامل" : "فتح دليل الحسابات بالكامل"} title={allExpanded ? "تقليص الكل" : "فتح الكل"} className="flex h-7 w-7 items-center justify-center rounded-md border border-slate-400 bg-white text-base font-bold text-slate-900 hover:bg-slate-50">{allExpanded ? "−" : "+"}</button>
+                <div className="relative z-10 flex items-center gap-2 border-b border-slate-200 bg-white px-4 py-2 sm:px-5">
+                  <div className="flex shrink-0 items-center gap-1 bg-white">
+                    <button type="button" onClick={expandAll} aria-label="فتح دليل الحسابات بالكامل" title="فتح الكل" className="flex h-6 w-6 items-center justify-center rounded border border-slate-400 bg-white text-sm font-bold text-slate-900 hover:bg-slate-50">+</button>
+                    <button type="button" onClick={collapseAll} aria-label="تقليص دليل الحسابات بالكامل" title="تقليص الكل" className="flex h-6 w-6 items-center justify-center rounded border border-slate-400 bg-white text-sm font-bold text-slate-900 hover:bg-slate-50">−</button>
                   </div>
-                  <span className="text-xs font-bold text-slate-500">{allExpanded ? "تقليص الدليل بالكامل" : "فتح الدليل بالكامل"}</span>
+                  <span className="text-[11px] font-bold text-slate-500">التحكم في مستويات الدليل</span>
                 </div>
                 <div className="relative">{renderTree(null, true)}</div>
               </div>
