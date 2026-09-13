@@ -116,8 +116,9 @@ export default function AccountsPage() {
     return children(parent).map((account) => {
       const accountHasChildren = hasChildren(account.id);
       const manuallyExpanded = expanded.has(account.id);
-      const isVisibleByLevel = account.level <= visibleLevel;
-      const isExpanded = query.trim() ? true : manuallyExpanded;
+      const isSearching = query.trim().length > 0;
+      const isVisibleByLevel = isSearching ? true : account.level <= visibleLevel;
+      const isExpanded = isSearching ? true : manuallyExpanded;
       const metadata = `${typeLabels[account.account_type ?? ""] ?? "غير مصنف"} · ${statementLabels[account.statement_type ?? ""] ?? "غير مصنف"}`;
       return <div key={account.id} className="relative">
         {isVisibleByLevel && <>
