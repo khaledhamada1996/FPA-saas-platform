@@ -6,7 +6,7 @@ import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 type Org={id:string;name:string;parent_organization_id:string|null};
 type Account={id:string;code:string;name:string;account_type:string|null};
 type GroupAccount={id:string;code:string;name:string};
-type Mapping={organization_id:string;organization_name:string;account_id:string;account_code:string;account_name:string;group_reporting_account_id:string;group_code:string;group_name:string};
+type Mapping={id:string;organization_id:string;organization_name:string;account_id:string;account_code:string;account_name:string;group_reporting_account_id:string;group_code:string;group_name:string};
 
 export default function GroupMappingPage(){
  const supabase=getSupabaseBrowserClient();
