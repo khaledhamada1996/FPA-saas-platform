@@ -34,6 +34,7 @@ export default function AccountsPage() {
   const [query, setQuery] = useState("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
   const [error, setError] = useState("");
   const [selected, setSelected] = useState<Account | null>(null);
   const [parentId, setParentId] = useState("");
@@ -82,6 +83,29 @@ export default function AccountsPage() {
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
+  async function deleteAccount(account: Account) {
+    if (!organizationId) return;
+    const confirmed = window.confirm(`هل تريد حذف الحساب «${account.code} — ${account.name}»؟\n\nلا يمكن حذف الحساب إذا كان لديه حسابات تابعة أو كان مستخدمًا في قيود أو موازنات أو توقعات.`);
+    if (!confirmed) return;
+    setDeletingId(account.id); setError("");
+    const supabase = getSupabaseBrowserClient();
+    const result = await supabase.rpc("delete_chart_account", { p_organization_id: organizationId, p_account_id: account.id });
+    if (result.error) {
+      const messages: Record<string, string> = {
+        ACCOUNT_HAS_CHILDREN: "لا يمكن حذف الحساب لأنه يحتوي على حسابات تابعة. احذف أو انقل الحسابات التابعة أولًا.",
+        ACCOUNT_IN_USE: "لا يمكن حذف الحساب لأنه مستخدم في بيانات مالية أو موازنات أو توقعات.",
+        ACCOUNT_NOT_FOUND: "الحساب غير موجود أو لم يعد ضمن الشركة الحالية.",
+        FORBIDDEN: "ليس لديك صلاحية حذف الحساب.",
+      };
+      const key = result.error.message?.match(/ACCOUNT_[A-Z_]+|FORBIDDEN/)?.[0];
+      setError(messages[key ?? ""] ?? result.error.message);
+    } else {
+      if (selected?.id === account.id) resetForm();
+      await load();
+    }
+    setDeletingId(null);
+  }
+
   async function saveAccount() {
     if (!organizationId) return;
     if (!form.code.trim() || !form.name.trim()) { setError("كود الحساب واسم الحساب إلزاميان"); return; }
@@ -102,6 +126,7 @@ export default function AccountsPage() {
       const manuallyExpanded = expanded.has(account.id);
       const isVisibleByLevel = account.level <= visibleLevel;
       const isExpanded = query.trim() ? true : manuallyExpanded;
+      const metadata = `${typeLabels[account.account_type ?? ""] ?? "غير مصنف"} · ${statementLabels[account.statement_type ?? ""] ?? "غير مصنف"}`;
       return (
         <div key={account.id} className="relative">
           {isVisibleByLevel && (
@@ -113,18 +138,22 @@ export default function AccountsPage() {
                 <span className="pointer-events-none absolute right-0 top-1/2 h-px w-5 bg-slate-300" aria-hidden="true" />
                 <div className="relative z-10 flex shrink-0 items-center gap-1 bg-white px-0.5">
                   {accountHasChildren ? (
-                    <>
-                      <button type="button" onClick={() => toggleExpanded(account.id)} aria-label={`فتح أو تقليص ${account.name}`} title="فتح / تقليص هذا المستوى" className="flex h-5 w-5 items-center justify-center rounded border border-slate-300 bg-white text-xs font-bold leading-none text-slate-700 hover:border-slate-500 hover:bg-slate-50">{isExpanded ? "−" : "+"}</button>
-                    </>
+                    <button type="button" onClick={() => toggleExpanded(account.id)} aria-label={`فتح أو تقليص ${account.name}`} title="فتح / تقليص هذا المستوى" className="flex h-5 w-5 items-center justify-center rounded border border-slate-300 bg-white text-xs font-bold leading-none text-slate-700 hover:border-slate-500 hover:bg-slate-50">{isExpanded ? "−" : "+"}</button>
                   ) : <span className="w-5" />}
                 </div>
                 <span className={`relative z-10 flex h-6 w-6 shrink-0 items-center justify-center rounded-full border text-[9px] font-bold ${isRoot ? "border-slate-900 bg-slate-900 text-white" : "border-slate-200 bg-white text-slate-500"}`}>{account.level}</span>
-                <div className="min-w-0 flex-1 flex items-center gap-3 leading-tight">
+                <div className="min-w-0 flex-1 flex items-center gap-3 leading-tight pe-2 sm:pe-0">
                   <p className="shrink-0 font-semibold text-[13px] text-slate-900">{account.code}</p>
-                  <p className="min-w-0 font-medium text-[13px] text-slate-800">{account.name}</p>
-                  <p className="hidden min-w-0 truncate text-[11px] text-slate-400 sm:block"><span>{typeLabels[account.account_type ?? ""] ?? "غير مصنف"}</span><span className="mx-2 text-slate-300">·</span><span>{statementLabels[account.statement_type ?? ""] ?? "غير مصنف"}</span></p>
+                  <p className="min-w-0 truncate font-medium text-[13px] text-slate-800">{account.name}</p>
                 </div>
-                <button type="button" onClick={() => editAccount(account)} className="relative z-10 shrink-0 rounded-md border border-slate-200 bg-white px-2.5 py-1 text-[11px] font-bold text-slate-700 hover:bg-slate-100">تعديل</button>
+                <div className="hidden w-56 shrink-0 text-center text-[11px] font-medium text-slate-400 sm:block" aria-label="تصنيف الحساب">{metadata}</div>
+                <div className="relative z-10 flex shrink-0 items-center gap-1 bg-white ps-1">
+                  <button type="button" onClick={() => editAccount(account)} className="rounded-md border border-slate-200 bg-white px-2.5 py-1 text-[11px] font-bold text-slate-700 hover:bg-slate-100">تعديل</button>
+                  <button type="button" onClick={() => void deleteAccount(account)} disabled={deletingId === account.id} className="rounded-md border border-red-200 bg-white px-2.5 py-1 text-[11px] font-bold text-red-600 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50">{deletingId === account.id ? "..." : "حذف"}</button>
+                </div>
+                <div className="absolute left-1/2 top-full z-20 -translate-x-1/2 pt-1 sm:hidden">
+                  <span className="whitespace-nowrap rounded bg-white px-2 py-0.5 text-[9px] font-medium text-slate-400 shadow-sm">{metadata}</span>
+                </div>
               </div>
               {accountHasChildren && isExpanded && account.level < 6 && renderTree(account.id)}
             </>
