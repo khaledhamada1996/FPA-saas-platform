@@ -37,6 +37,7 @@ export default function AccountsPage() {
   const [error, setError] = useState("");
   const [selected, setSelected] = useState<Account | null>(null);
   const [parentId, setParentId] = useState("");
+  const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [form, setForm] = useState({ code: "", name: "", account_type: "asset", statement_type: "balance_sheet", statement_section: "", normal_balance: "debit", is_contra: false });
 
   const organizationId = typeof window !== "undefined" ? window.sessionStorage.getItem("activeOrganizationId") : null;
@@ -60,6 +61,15 @@ export default function AccountsPage() {
 
   const roots = filtered.filter((a) => !a.parent_account_id);
   const children = (parent: string | null) => filtered.filter((a) => a.parent_account_id === parent);
+  const hasChildren = (accountId: string) => accounts.some((a) => a.parent_account_id === accountId);
+
+  function toggleExpanded(accountId: string) {
+    setExpanded((current) => {
+      const next = new Set(current);
+      if (next.has(accountId)) next.delete(accountId); else next.add(accountId);
+      return next;
+    });
+  }
 
   function resetForm() {
     setSelected(null); setParentId("");
@@ -87,16 +97,33 @@ export default function AccountsPage() {
   }
 
   function renderTree(parent: string | null) {
-    return children(parent).map((account) => (
-      <div key={account.id}>
-        <div className="group flex items-center gap-3 border-b border-slate-100 px-4 py-3 hover:bg-slate-50 sm:px-5" style={{ paddingRight: `${Math.max(1, account.level) * 22}px` }}>
-          <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-white text-[10px] font-bold text-slate-500">{account.level}</span>
-          <div className="min-w-0 flex-1"><p className="font-semibold text-slate-900">{account.code} <span className="font-normal text-slate-600">— {account.name}</span></p><p className="mt-0.5 text-[11px] text-slate-400">{typeLabels[account.account_type ?? ""] ?? "غير مصنف"} · {statementLabels[account.statement_type ?? ""] ?? "غير مصنف"}</p></div>
-          <button type="button" onClick={() => editAccount(account)} className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-bold text-slate-700 opacity-100 hover:bg-slate-100">تعديل</button>
+    return children(parent).map((account) => {
+      const accountHasChildren = hasChildren(account.id);
+      const isExpanded = query.trim() ? true : expanded.has(account.id);
+      return (
+        <div key={account.id}>
+          <div className="group flex items-center gap-3 border-b border-slate-100 px-4 py-3 hover:bg-slate-50 sm:px-5" style={{ paddingRight: `${Math.max(1, account.level) * 22}px` }}>
+            <div className="flex w-7 shrink-0 items-center justify-center">
+              {accountHasChildren ? (
+                <button
+                  type="button"
+                  onClick={() => toggleExpanded(account.id)}
+                  aria-label={isExpanded ? `تقليص ${account.name}` : `فتح ${account.name}`}
+                  title={isExpanded ? "تقليص المستوى" : "فتح المستوى"}
+                  className="flex h-6 w-6 items-center justify-center rounded-md border border-slate-300 bg-white text-sm font-bold leading-none text-slate-700 hover:border-slate-500 hover:bg-slate-50"
+                >
+                  {isExpanded ? "−" : "+"}
+                </button>
+              ) : <span className="h-6 w-6" />}
+            </div>
+            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-white text-[10px] font-bold text-slate-500">{account.level}</span>
+            <div className="min-w-0 flex-1"><p className="font-semibold text-slate-900">{account.code} <span className="font-normal text-slate-600">— {account.name}</span></p><p className="mt-0.5 text-[11px] text-slate-400">{typeLabels[account.account_type ?? ""] ?? "غير مصنف"} · {statementLabels[account.statement_type ?? ""] ?? "غير مصنف"}</p></div>
+            <button type="button" onClick={() => editAccount(account)} className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-bold text-slate-700 opacity-100 hover:bg-slate-100">تعديل</button>
+          </div>
+          {accountHasChildren && isExpanded && account.level < 6 && renderTree(account.id)}
         </div>
-        {account.level < 6 && renderTree(account.id)}
-      </div>
-    ));
+      );
+    });
   }
 
   return (
@@ -116,8 +143,8 @@ export default function AccountsPage() {
 
         <div className="mt-6 grid gap-5 lg:grid-cols-[minmax(0,1fr)_380px]">
           <section className="order-2 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm lg:order-1">
-            <div className="flex flex-col gap-3 border-b border-slate-200 p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5"><div><h3 className="font-bold">شجرة دليل الحسابات</h3><p className="mt-1 text-xs text-slate-500">المستويات المعروضة من 1 إلى 6، ويمكن التفرع داخل كل مستوى.</p></div><input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="ابحث بالكود أو اسم الحساب" className="h-10 w-full rounded-lg border border-slate-300 px-3 text-sm outline-none focus:border-slate-500 sm:max-w-xs" /></div>
-            {loading ? <div className="p-8 text-sm text-slate-500">جارٍ تحميل دليل الحسابات…</div> : filtered.length ? <div>{roots.map((root) => <div key={root.id}><div className="flex items-center gap-3 border-b border-slate-200 bg-slate-50 px-4 py-3 sm:px-5"><span className="flex h-7 w-7 items-center justify-center rounded-full bg-slate-900 text-[10px] font-bold text-white">1</span><div className="flex-1"><p className="font-bold">{root.code} — {root.name}</p><p className="text-[11px] text-slate-500">{typeLabels[root.account_type ?? ""] ?? "غير مصنف"}</p></div><button type="button" onClick={() => editAccount(root)} className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-bold">تعديل</button></div>{root.level < 6 && renderTree(root.id)}</div>)}</div> : <div className="p-10 text-center text-sm text-slate-500">لا توجد حسابات بعد. أنشئ أول حساب أو استورد دليل الحسابات من Excel.</div>}
+            <div className="flex flex-col gap-3 border-b border-slate-200 p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5"><div><h3 className="font-bold">شجرة دليل الحسابات</h3><p className="mt-1 text-xs text-slate-500">المستويات المعروضة من 1 إلى 6، ويمكن فتح وتقليص كل مستوى من علامة + و − على اليمين.</p></div><input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="ابحث بالكود أو اسم الحساب" className="h-10 w-full rounded-lg border border-slate-300 px-3 text-sm outline-none focus:border-slate-500 sm:max-w-xs" /></div>
+            {loading ? <div className="p-8 text-sm text-slate-500">جارٍ تحميل دليل الحسابات…</div> : filtered.length ? <div>{roots.map((root) => { const rootHasChildren = hasChildren(root.id); const rootExpanded = query.trim() ? true : expanded.has(root.id); return <div key={root.id}><div className="flex items-center gap-3 border-b border-slate-200 bg-slate-50 px-4 py-3 sm:px-5"><div className="flex w-7 shrink-0 items-center justify-center">{rootHasChildren ? <button type="button" onClick={() => toggleExpanded(root.id)} aria-label={rootExpanded ? `تقليص ${root.name}` : `فتح ${root.name}`} title={rootExpanded ? "تقليص المستوى" : "فتح المستوى"} className="flex h-6 w-6 items-center justify-center rounded-md border border-slate-300 bg-white text-sm font-bold leading-none text-slate-700 hover:border-slate-500 hover:bg-slate-50">{rootExpanded ? "−" : "+"}</button> : <span className="h-6 w-6" />}</div><span className="flex h-7 w-7 items-center justify-center rounded-full bg-slate-900 text-[10px] font-bold text-white">1</span><div className="flex-1"><p className="font-bold">{root.code} — {root.name}</p><p className="text-[11px] text-slate-500">{typeLabels[root.account_type ?? ""] ?? "غير مصنف"}</p></div><button type="button" onClick={() => editAccount(root)} className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-bold">تعديل</button></div>{rootHasChildren && rootExpanded && root.level < 6 && renderTree(root.id)}</div>; })}</div> : <div className="p-10 text-center text-sm text-slate-500">لا توجد حسابات بعد. أنشئ أول حساب أو استورد دليل الحسابات من Excel.</div>}
           </section>
 
           <aside className="order-1 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm lg:order-2">
