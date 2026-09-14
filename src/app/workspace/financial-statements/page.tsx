@@ -5,20 +5,13 @@ import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 
 type Period = { id: string; period_start: string; period_end: string; status: string };
 type Option = { id: string; code?: string | null; name: string };
-type FS = any;
-type OCI = any;
-type StatementKey = "balance" | "income" | "oci" | "cash" | "equity";
 type Filters = Record<string, string>;
-type TaxResult = any;
+type StatementKey = "balance" | "income" | "oci" | "cash" | "equity";
 
+type TaxResult = any;
+const supabase = getSupabaseBrowserClient();
 const statements: StatementKey[] = ["balance", "income", "oci", "cash", "equity"];
-const statementNames: Record<StatementKey, string> = {
-  balance: "قائمة المركز المالي",
-  income: "قائمة الدخل",
-  oci: "قائمة الدخل الشامل الآخر",
-  cash: "قائمة التدفقات النقدية",
-  equity: "قائمة التغيرات في حقوق الملكية",
-};
+const statementNames: Record<StatementKey, string> = { balance: "قائمة المركز المالي", income: "قائمة الدخل", oci: "قائمة الدخل الشامل الآخر", cash: "قائمة التدفقات النقدية", equity: "قائمة التغيرات في حقوق الملكية" };
 const fields = [
   { key: "branch", label: "الفرع", itemsKey: "branches" },
   { key: "department", label: "الإدارة", itemsKey: "departments" },
@@ -29,212 +22,49 @@ const fields = [
   { key: "account", label: "الحساب", itemsKey: "accounts" },
 ] as const;
 const emptyFilters = (): Filters => ({ branch: "", department: "", cost_center: "", region: "", product: "", project: "", account: "" });
+const money = (v: unknown) => (Number(v || 0) / 100).toLocaleString("ar-SA", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const formatDate = (v: string) => new Date(`${v}T00:00:00`).toLocaleDateString("ar-SA", { year: "numeric", month: "long", day: "numeric" });
+const iso = (d: Date) => d.toISOString().slice(0, 10);
 
-const money = (value: unknown) =>
-  (Number(value || 0) / 100).toLocaleString("ar-SA", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-const date = (value: string) =>
-  new Date(`${value}T00:00:00`).toLocaleDateString("ar-SA", { year: "numeric", month: "long", day: "numeric" });
-const isoStart = (year: number, month: number) => `${year}-${String(month).padStart(2, "0")}-01`;
-
-function Metric({ label, value }: { label: string; value: unknown }) {
-  return <div className="rounded-xl border border-slate-200 bg-white p-4"><p className="text-[11px] font-bold text-slate-400">{label}</p><p className="mt-2 text-lg font-bold tabular-nums text-slate-950">{money(value)}</p></div>;
-}
 function Row({ label, value, strong = false }: { label: string; value: unknown; strong?: boolean }) {
   return <div className={`flex items-center justify-between gap-4 border-b border-slate-100 py-3 last:border-0 ${strong ? "font-bold text-slate-950" : "text-slate-700"}`}><span>{label}</span><span className="tabular-nums">{money(value)}</span></div>;
 }
-function Section({ title, children }: { title: string; children: ReactNode }) {
-  return <div className="rounded-xl border border-slate-100 bg-white p-4"><h4 className="mb-3 text-sm font-bold text-slate-950">{title}</h4>{children}</div>;
-}
-function Empty({ text }: { text: string }) { return <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50 p-8 text-center text-sm text-slate-500">{text}</div>; }
+function Section({ title, children }: { title: string; children: ReactNode }) { return <div className="border border-slate-200 bg-white p-4 sm:p-5"><h3 className="mb-3 text-sm font-bold text-slate-950">{title}</h3>{children}</div>; }
+function Metric({ label, value }: { label: string; value: unknown }) { return <div className="border border-slate-200 bg-white p-4"><p className="text-[11px] font-bold text-slate-400">{label}</p><p className="mt-2 text-lg font-bold tabular-nums text-slate-950">{money(value)}</p></div>; }
 
-function Balance({ data }: { data: FS }) {
-  const accounts = data?.accounts || [];
-  return <div className="grid gap-6 lg:grid-cols-3">
-    <Section title="الأصول"><Row label="إجمالي الأصول" value={data?.total_assets} strong /></Section>
-    <Section title="الالتزامات"><Row label="إجمالي الالتزامات" value={data?.total_liabilities} strong /></Section>
-    <Section title="حقوق الملكية"><Row label="حقوق الملكية المعروضة" value={data?.displayed_equity ?? data?.total_equity} strong /><Row label="صافي الربح YTD" value={data?.ytd_net_income} /></Section>
-    <div className="lg:col-span-3 rounded-xl bg-slate-50 p-4 text-sm font-bold">اختبار التوازن: {money(data?.balance_check)} {Number(data?.balance_check || 0) === 0 ? "✓ متوازن" : "— يحتاج مراجعة"}</div>
-    <div className="lg:col-span-3 overflow-x-auto rounded-xl border border-slate-100 bg-white">
-      <table className="w-full min-w-[900px] text-right text-sm"><thead className="border-b border-slate-200 text-xs text-slate-500"><tr><th className="px-3 py-3">الحساب</th><th className="px-3 py-3">التصنيف</th><th className="px-3 py-3">مدين</th><th className="px-3 py-3">دائن</th><th className="px-3 py-3">الرصيد</th></tr></thead>
-      <tbody>{accounts.map((row: any) => <tr key={`${row.code}-${row.name}`} className="border-b border-slate-100"><td className="px-3 py-2 font-semibold">{row.code} — {row.name}</td><td className="px-3 py-2 text-xs text-slate-500">{row.subclassification || "غير مصنف"}</td><td className="px-3 py-2 tabular-nums">{money(row.debit)}</td><td className="px-3 py-2 tabular-nums">{money(row.credit)}</td><td className="px-3 py-2 tabular-nums">{money(row.balance)}</td></tr>)}</tbody></table>
-    </div>
-  </div>;
+function FilterBar({ options, filters, onChange }: { options: any; filters: Filters; onChange: (f: Filters) => void }) {
+  const [field, setField] = useState("branch"); const [value, setValue] = useState("");
+  const def = fields.find((x) => x.key === field) || fields[0]; const items = (options?.[def.itemsKey] || []) as Option[]; const active = Object.entries(filters).filter(([, v]) => Boolean(v));
+  const label = (key: string) => fields.find((x) => x.key === key)?.label || key;
+  const name = (key: string, id: string) => { const d = fields.find((x) => x.key === key); return ((options?.[d?.itemsKey || ""] || []) as Option[]).find((x) => x.id === id)?.name || id; };
+  return <div className="border-b border-slate-200 bg-slate-50 p-3"><div className="flex flex-wrap items-center gap-2"><span className="text-xs font-bold text-slate-500">تصفية</span>{active.map(([key, id]) => <button key={key} type="button" onClick={() => onChange({ ...filters, [key]: "" })} className="rounded-full border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700">{label(key)} = {name(key, id)} ×</button>)}<select value={field} onChange={(e) => { setField(e.target.value); setValue(""); }} className="min-h-9 border border-slate-300 bg-white px-2 text-xs font-semibold"><option value="">إضافة فلتر</option>{fields.map((x) => <option key={x.key} value={x.key}>{x.label}</option>)}</select><select value={value} onChange={(e) => setValue(e.target.value)} className="min-h-9 min-w-44 border border-slate-300 bg-white px-2 text-xs" disabled={!field}><option value="">اختر القيمة</option>{items.map((x) => <option key={x.id} value={x.id}>{x.code ? `${x.code} — ` : ""}{x.name}</option>)}</select><button type="button" disabled={!field || !value} onClick={() => { onChange({ ...filters, [field]: value }); setValue(""); }} className="min-h-9 bg-slate-950 px-4 text-xs font-bold text-white disabled:opacity-40">تطبيق</button>{active.length > 0 && <button type="button" onClick={() => onChange(emptyFilters())} className="min-h-9 px-2 text-xs font-bold text-red-600">مسح الكل</button>}</div></div>;
 }
-function Income({ data, terms }: { data: FS; terms: any }) {
-  return <div className="max-w-4xl rounded-xl border border-slate-100 bg-white p-5">
-    <Row label={terms?.revenue || "الإيرادات"} value={data?.revenue} />
-    <Row label={terms?.cogs || "تكلفة المبيعات"} value={data?.cogs} />
-    <Row label="مجمل الربح" value={data?.gross_profit} strong />
-    <Row label={terms?.operating_expenses || "المصروفات التشغيلية"} value={data?.operating_expenses} />
-    <Row label="الدخل الآخر" value={data?.other_income} />
-    <Row label="الربح التشغيلي" value={data?.operating_profit ?? data?.ebitda} strong />
-    <Row label="الإهلاك والاستهلاك" value={data?.depreciation_amortization} />
-    <Row label="الربح قبل التمويل والضريبة" value={data?.profit_before_financing_and_tax ?? data?.ebit} strong />
-    <Row label="تكلفة التمويل" value={data?.finance_cost} />
-    <Row label="المصروفات الأخرى" value={data?.other_expenses} />
-    <Row label="الربح قبل ضريبة الدخل" value={data?.ebt} strong />
-    <Row label="مصروف ضريبة الدخل" value={data?.tax} />
-    <Row label="صافي الربح أو الخسارة" value={data?.net_income} strong />
-  </div>;
-}
-function OCIView({ data }: { data: OCI | null }) {
-  if (!data) return <Empty text="لا توجد بيانات للدخل الشامل الآخر في الفترة الحالية." />;
-  return <div className="grid gap-6 lg:grid-cols-2"><Section title="الفترة الحالية">{(data.period?.rows || []).map((row: any) => <Row key={row.code} label={`${row.code} — ${row.name}`} value={row.amount} />)}<Row label="إجمالي الدخل الشامل الآخر" value={data.period?.total} strong /></Section><Section title="من بداية السنة المالية">{(data.ytd?.rows || []).map((row: any) => <Row key={row.code} label={`${row.code} — ${row.name}`} value={row.amount} />)}<Row label="إجمالي الدخل الشامل الآخر YTD" value={data.ytd?.total} strong /></Section></div>;
-}
-function CashFlow({ data }: { data: FS }) {
-  const op = data?.operating || {}, inv = data?.investing || {}, fin = data?.financing || {}, direct = data?.method === "direct";
-  return <div className="grid gap-6 lg:grid-cols-3"><Section title="الأنشطة التشغيلية"><Row label={direct ? "المقبوضات التشغيلية" : "صافي الربح"} value={direct ? op.cash_inflows : op.net_income} />{direct ? <Row label="المدفوعات التشغيلية" value={-Number(op.cash_outflows || 0)} /> : <><Row label="الإهلاك والاستهلاك" value={op.depreciation_amortization} /><Row label="تغيرات رأس المال العامل" value={op.working_capital_change} /></>}<Row label="صافي التدفق النقدي من الأنشطة التشغيلية" value={op.net_operating_cash_flow} strong /></Section><Section title="الأنشطة الاستثمارية"><Row label="صافي التدفق النقدي من الأنشطة الاستثمارية" value={inv.net_cash_flow} strong /></Section><Section title="الأنشطة التمويلية"><Row label="صافي التدفق النقدي من الأنشطة التمويلية" value={fin.net_cash_flow} strong /></Section><div className="lg:col-span-3 grid gap-3 sm:grid-cols-3"><Metric label="النقد وما في حكمه أول الفترة" value={data?.opening_cash} /><Metric label="صافي التغير في النقد" value={data?.net_change} /><Metric label="النقد وما في حكمه آخر الفترة" value={data?.closing_cash} /></div><div className="lg:col-span-3 rounded-xl bg-slate-50 p-4 text-sm font-bold">مطابقة النقدية: {money(data?.reconciliation_difference)} {Number(data?.reconciliation_difference || 0) === 0 ? "✓ متطابقة" : "— تحتاج مراجعة"}</div></div>;
-}
-function Equity({ data }: { data: FS }) {
-  return <div className="grid gap-6 lg:grid-cols-2"><Section title="التغير في حقوق الملكية"><div className="overflow-x-auto"><table className="w-full min-w-[650px] text-right text-sm"><thead className="border-b border-slate-200 text-xs text-slate-500"><tr><th className="px-3 py-3">البند</th><th className="px-3 py-3">الرصيد الافتتاحي</th><th className="px-3 py-3">التغير خلال الفترة</th><th className="px-3 py-3">الرصيد الختامي</th></tr></thead><tbody>{(data?.rows || []).map((row: any) => <tr key={`${row.code}-${row.name}`} className="border-b border-slate-100"><td className="px-3 py-3 font-semibold">{row.code} — {row.name}</td><td className="px-3 py-3 tabular-nums">{money(row.opening)}</td><td className="px-3 py-3 tabular-nums">{money(row.movement)}</td><td className="px-3 py-3 tabular-nums">{money(row.closing)}</td></tr>)}</tbody></table></div></Section><Section title="المحصلة"><Row label="صافي الربح YTD" value={data?.ytd_net_income} strong /><Row label="حقوق الملكية الختامية المعروضة" value={data?.displayed_closing_equity} strong /></Section></div>;
-}
-
-function FilterBar({ options, filters, onChange, onClear }: { options: any; filters: Filters; onChange: (next: Filters) => void; onClear: () => void }) {
-  const [field, setField] = useState("branch");
-  const [value, setValue] = useState("");
-  const [query, setQuery] = useState("");
-  const fieldDef = fields.find((item) => item.key === field) || fields[0];
-  const items = ((options[fieldDef.itemsKey] || []) as Option[]).filter((item) => `${item.code || ""} ${item.name}`.toLocaleLowerCase("ar").includes(query.toLocaleLowerCase("ar")));
-  const active = Object.entries(filters).filter(([, v]) => Boolean(v));
-  const labelOf = (key: string) => fields.find((item) => item.key === key)?.label || key;
-  const nameOf = (key: string, id: string) => ((options[fields.find((item) => item.key === key)?.itemsKey || ""] || []) as Option[]).find((item) => item.id === id)?.name || id;
-  const add = () => { if (!value) return; onChange({ ...filters, [field]: value }); setValue(""); setQuery(""); };
-  return <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-    <div className="flex flex-col gap-3 xl:flex-row xl:items-center">
-      <div className="flex flex-1 flex-wrap items-center gap-2">
-        <span className="text-xs font-bold text-slate-500">تصفية:</span>
-        {active.map(([key, id]) => <button key={key} onClick={() => onChange({ ...filters, [key]: "" })} className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100">{labelOf(key)}: {nameOf(key, id)} ×</button>)}
-        {active.length > 0 && <button onClick={onClear} className="text-xs font-bold text-red-600">مسح الكل</button>}
-      </div>
-      <div className="flex flex-wrap gap-2">
-        <select value={field} onChange={(e) => { setField(e.target.value); setValue(""); setQuery(""); }} className="min-h-10 rounded-lg border border-slate-300 bg-white px-3 text-sm font-semibold"><option value="">إضافة فلتر</option>{fields.map((item) => <option key={item.key} value={item.key}>{item.label}</option>)}</select>
-        <div className="relative"><input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="بحث داخل القيم..." className="min-h-10 w-52 rounded-lg border border-slate-300 px-3 text-sm outline-none focus:border-slate-500" />{query && <div className="absolute right-0 top-11 z-40 max-h-56 w-full overflow-y-auto rounded-lg border border-slate-200 bg-white p-1 shadow-xl">{items.slice(0,50).map((item) => <button type="button" key={item.id} onClick={() => { setValue(item.id); setQuery(item.name); }} className="block w-full rounded px-2 py-2 text-right text-xs hover:bg-slate-100">{item.code ? `${item.code} — ` : ""}{item.name}</button>)}</div>}</div>
-        <button onClick={add} disabled={!value} className="min-h-10 rounded-lg bg-slate-950 px-4 text-sm font-bold text-white disabled:opacity-40">إضافة</button>
-      </div>
-    </div>
-  </div>;
-}
-
-function TaxPanel({ result, regime, setRegime, ownership, setOwnership, onCalculate, running }: { result: TaxResult; regime: string; setRegime: (v: string) => void; ownership: string; setOwnership: (v: string) => void; onCalculate: () => void; running: boolean }) {
-  return <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 p-4" dir="rtl"><div className="w-full max-w-2xl rounded-2xl bg-white p-5 shadow-2xl"><div className="flex items-start justify-between gap-4"><div><h3 className="text-lg font-bold text-slate-950">حاسبة الزكاة وضريبة الدخل</h3><p className="mt-1 text-xs leading-5 text-slate-500">الحساب آلي من القوائم الحالية، مع إبقاء المعالجات النظامية القابلة للتعديل تحت مراجعة المستخدم.</p></div><button onClick={() => setRegime("close")} className="text-xl text-slate-400">×</button></div><div className="mt-5 grid gap-3 sm:grid-cols-3"><button onClick={() => setRegime("zakat")} className={`rounded-xl border p-3 text-sm font-bold ${regime === "zakat" ? "border-slate-950 bg-slate-950 text-white" : "border-slate-200"}`}>زكاة</button><button onClick={() => setRegime("income_tax")} className={`rounded-xl border p-3 text-sm font-bold ${regime === "income_tax" ? "border-slate-950 bg-slate-950 text-white" : "border-slate-200"}`}>ضريبة دخل</button><button onClick={() => setRegime("mixed")} className={`rounded-xl border p-3 text-sm font-bold ${regime === "mixed" ? "border-slate-950 bg-slate-950 text-white" : "border-slate-200"}`}>مختلطة</button></div>{regime !== "zakat" && regime !== "close" && <div className="mt-4 rounded-xl bg-slate-50 p-4"><label className="text-xs font-bold text-slate-600">نسبة الملكية السعودية %</label><input type="number" min="0" max="100" value={ownership} onChange={(e) => setOwnership(e.target.value)} className="mt-2 min-h-10 w-full rounded-lg border border-slate-300 bg-white px-3" /><p className="mt-2 text-[11px] text-slate-500">ضريبة الدخل في السعودية ترتبط بحصة الشركاء غير السعوديين وفق نظام ضريبة الدخل.</p></div>}<button onClick={onCalculate} disabled={running || regime === "close"} className="mt-4 min-h-11 w-full rounded-xl bg-slate-950 px-4 text-sm font-bold text-white disabled:opacity-50">{running ? "جاري الحساب..." : "احسب الآن"}</button>{result && regime !== "close" && <div className="mt-5 grid gap-3 sm:grid-cols-2"><Metric label="الربح قبل الضريبة YTD" value={result.profit_before_tax_ytd} /><Metric label="وعاء الزكاة التقديري" value={result.preliminary_zakat_base} /><Metric label="الزكاة التقديرية" value={result.preliminary_zakat} /><Metric label="ضريبة الدخل التقديرية" value={result.preliminary_income_tax} /><Metric label="إجمالي المبلغ التقديري" value={result.total_preliminary_charge} /><div className="sm:col-span-2 rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs leading-5 text-amber-900">{result.warning}</div></div>}</div></div>;
-}
+function Heading({ title, start, end, asOf = false }: { title: string; start: string; end: string; asOf?: boolean }) { return <div className="border-b border-slate-200 px-4 py-4 sm:px-5"><h2 className="text-base font-bold text-slate-950">{title}</h2><p className="mt-1 text-xs font-medium text-slate-500">{asOf ? `كما في ${formatDate(end)}` : `عن الفترة من ${formatDate(start)} إلى ${formatDate(end)}`}</p></div>; }
+function Balance({ data }: { data: any }) { return <div className="p-4 sm:p-5"><div className="grid gap-4 md:grid-cols-3"><Section title="الأصول"><Row label="إجمالي الأصول" value={data?.total_assets} strong /></Section><Section title="الالتزامات"><Row label="إجمالي الالتزامات" value={data?.total_liabilities} strong /></Section><Section title="حقوق الملكية"><Row label="حقوق الملكية المعروضة" value={data?.total_equity} strong /><Row label="صافي الربح YTD" value={data?.ytd_net_income} /></Section></div><div className="mt-4 border border-slate-200 bg-slate-50 p-4 text-sm font-bold">اختبار التوازن: {money(data?.balance_check)} {Number(data?.balance_check || 0) === 0 ? "✓ متوازن" : "— يحتاج مراجعة"}</div><div className="mt-4 overflow-x-auto border border-slate-200"><table className="w-full min-w-[900px] text-right text-sm"><thead className="border-b border-slate-200 bg-slate-50 text-xs text-slate-500"><tr><th className="px-3 py-3">الحساب</th><th className="px-3 py-3">التصنيف</th><th className="px-3 py-3">مدين</th><th className="px-3 py-3">دائن</th><th className="px-3 py-3">الرصيد</th></tr></thead><tbody>{(data?.accounts || []).map((r: any) => <tr key={`${r.code}-${r.name}`} className="border-b border-slate-100"><td className="px-3 py-2 font-semibold">{r.code} — {r.name}</td><td className="px-3 py-2 text-xs text-slate-500">{r.subclassification || "غير مصنف"}</td><td className="px-3 py-2 tabular-nums">{money(r.debit)}</td><td className="px-3 py-2 tabular-nums">{money(r.credit)}</td><td className="px-3 py-2 tabular-nums">{money(r.balance)}</td></tr>)}</tbody></table></div></div>; }
+function Income({ data }: { data: any }) { return <div className="max-w-4xl p-4 sm:p-5"><Row label="الإيرادات" value={data?.revenue} /><Row label="تكلفة المبيعات" value={data?.cogs} /><Row label="مجمل الربح" value={Number(data?.revenue || 0) - Number(data?.cogs || 0)} strong /><Row label="المصروفات التشغيلية" value={data?.operating_expenses} /><Row label="الدخل الآخر" value={data?.other_income} /><Row label="الربح التشغيلي" value={Number(data?.revenue || 0) - Number(data?.cogs || 0) - Number(data?.operating_expenses || 0) + Number(data?.other_income || 0)} strong /><Row label="الإهلاك والاستهلاك" value={data?.depreciation_amortization} /><Row label="الربح قبل التمويل والضريبة" value={data?.ebit} strong /><Row label="تكلفة التمويل" value={data?.finance_cost} /><Row label="المصروفات الأخرى" value={data?.other_expenses} /><Row label="الربح قبل ضريبة الدخل" value={data?.ebt} strong /><Row label="مصروف ضريبة الدخل" value={data?.tax} /><Row label="صافي الربح أو الخسارة" value={data?.net_income} strong /></div>; }
+function Cash({ data }: { data: any }) { const direct = data?.method === "direct"; const op = data?.operating || {}; return <div className="p-4 sm:p-5"><div className="grid gap-4 lg:grid-cols-3"><Section title="الأنشطة التشغيلية">{direct ? <><Row label="المقبوضات التشغيلية" value={op.cash_inflows} /><Row label="المدفوعات التشغيلية" value={-Number(op.cash_outflows || 0)} /></> : <><Row label="صافي الربح" value={op.net_income} /><Row label="الإهلاك والاستهلاك" value={op.depreciation_amortization} /><Row label="تغيرات رأس المال العامل" value={op.working_capital_change} /></>}<Row label="صافي التدفق التشغيلي" value={op.net_operating_cash_flow} strong /></Section><Section title="الأنشطة الاستثمارية"><Row label="صافي التدفق الاستثماري" value={data?.investing?.net_cash_flow} strong /></Section><Section title="الأنشطة التمويلية"><Row label="صافي التدفق التمويلي" value={data?.financing?.net_cash_flow} strong /></Section></div><div className="mt-4 grid gap-3 sm:grid-cols-3"><Metric label="النقد أول الفترة" value={data?.opening_cash} /><Metric label="صافي التغير" value={data?.net_change} /><Metric label="النقد آخر الفترة" value={data?.closing_cash} /></div><div className="mt-4 border border-slate-200 bg-slate-50 p-4 text-sm font-bold">مطابقة النقدية: {money(data?.reconciliation_difference)} {Number(data?.reconciliation_difference || 0) === 0 ? "✓ متطابقة" : "— تحتاج مراجعة"}</div></div>; }
+function Oci({ data }: { data: any }) { const rows = data?.period?.rows || []; return <div className="p-4 sm:p-5"><Section title="الدخل الشامل الآخر للفترة">{rows.length ? rows.map((r: any) => <Row key={`${r.code}-${r.name}`} label={`${r.code || ""} ${r.name || ""}`} value={r.amount} />) : <p className="text-sm text-slate-500">لا توجد بنود دخل شامل آخر.</p>}<Row label="إجمالي الدخل الشامل الآخر" value={data?.period?.total} strong /></Section></div>; }
+function Equity({ data }: { data: any }) { return <div className="p-4 sm:p-5"><div className="overflow-x-auto"><table className="w-full min-w-[700px] text-right text-sm"><thead className="border-b border-slate-200 bg-slate-50 text-xs text-slate-500"><tr><th className="px-3 py-3">البند</th><th className="px-3 py-3">الافتتاحي</th><th className="px-3 py-3">التغير</th><th className="px-3 py-3">الختامي</th></tr></thead><tbody>{(data?.rows || []).map((r: any) => <tr key={`${r.code}-${r.name}`} className="border-b border-slate-100"><td className="px-3 py-3 font-semibold">{r.code} — {r.name}</td><td className="px-3 py-3 tabular-nums">{money(r.opening)}</td><td className="px-3 py-3 tabular-nums">{money(r.movement)}</td><td className="px-3 py-3 tabular-nums">{money(r.closing)}</td></tr>)}</tbody></table></div><div className="mt-4"><Row label="صافي الربح YTD" value={data?.ytd_net_income} strong /><Row label="حقوق الملكية الختامية المعروضة" value={data?.displayed_closing_equity} strong /></div></div>; }
 
 export default function FinancialStatementsPage() {
-  const supabase = getSupabaseBrowserClient();
-  const [org, setOrg] = useState("");
-  const [industry, setIndustry] = useState("");
-  const [fiscalStartMonth, setFiscalStartMonth] = useState(1);
-  const [periods, setPeriods] = useState<Period[]>([]);
-  const [period, setPeriod] = useState("");
-  const [data, setData] = useState<FS | null>(null);
-  const [oci, setOci] = useState<OCI | null>(null);
-  const [equityRollforward, setEquityRollforward] = useState<any>(null);
-  const [options, setOptions] = useState<any>({});
-  const [templates, setTemplates] = useState<any[]>([]);
-  const [template, setTemplate] = useState("standard");
-  const [cashMethod, setCashMethod] = useState("indirect");
-  const [active, setActive] = useState<StatementKey>("balance");
-  const [filtersByStatement, setFiltersByStatement] = useState<Record<StatementKey, Filters>>({ balance: emptyFilters(), income: emptyFilters(), oci: emptyFilters(), cash: emptyFilters(), equity: emptyFilters() });
-  const [loading, setLoading] = useState(true);
-  const [running, setRunning] = useState(false);
-  const [taxOpen, setTaxOpen] = useState(false);
-  const [taxRunning, setTaxRunning] = useState(false);
-  const [taxResult, setTaxResult] = useState<TaxResult>(null);
-  const [taxRegime, setTaxRegime] = useState("zakat");
-  const [saudiOwnership, setSaudiOwnership] = useState("100");
-  const [error, setError] = useState("");
+  const [organizationId, setOrganizationId] = useState(""); const [periods, setPeriods] = useState<Period[]>([]); const [options, setOptions] = useState<any>({}); const [fiscalMonth, setFiscalMonth] = useState(1);
+  const [mode, setMode] = useState<"month" | "quarter" | "year" | "custom">("month"); const [selectedPeriod, setSelectedPeriod] = useState(""); const [startDate, setStartDate] = useState(""); const [endDate, setEndDate] = useState(""); const [cashMethod, setCashMethod] = useState<"direct" | "indirect">("indirect");
+  const [filters, setFilters] = useState<Record<StatementKey, Filters>>({ balance: emptyFilters(), income: emptyFilters(), oci: emptyFilters(), cash: emptyFilters(), equity: emptyFilters() }); const [data, setData] = useState<Record<StatementKey, any>>({ balance: null, income: null, oci: null, cash: null, equity: null }); const [loading, setLoading] = useState(true); const [error, setError] = useState("");
+  const [taxOpen, setTaxOpen] = useState(false); const [taxLoading, setTaxLoading] = useState(false); const [taxResult, setTaxResult] = useState<TaxResult>(null); const [taxProfile, setTaxProfile] = useState<any>({ regime: "zakat", zakat_method: "indirect", saudi_ownership_percent: 100, income_tax_rate: 20, zakat_rate: 2.5 });
 
-  useEffect(() => {
-    const id = window.sessionStorage.getItem("activeOrganizationId") || window.localStorage.getItem("activeOrganizationId") || "";
-    setOrg(id);
-    if (!id) { setError("لم يتم تحديد مساحة عمل."); setLoading(false); return; }
-    const savedTemplate = window.localStorage.getItem(`fpa:statement-template:${id}`);
-    const savedMethod = window.localStorage.getItem(`fpa:cash-method:${id}`);
-    if (savedTemplate) setTemplate(savedTemplate);
-    if (savedMethod) setCashMethod(savedMethod);
-    void Promise.all([
-      supabase.from("financial_periods").select("id,period_start,period_end,status").eq("organization_id", id).order("period_start", { ascending: false }),
-      supabase.from("organizations").select("industry,fiscal_year_start_month").eq("id", id).maybeSingle(),
-      supabase.from("financial_statement_templates").select("template_key,name_ar,name_en,activity_key,description_ar,config").eq("is_active", true).order("is_system", { ascending: false }),
-      supabase.rpc("get_reporting_filter_options", { p_organization_id: id }),
-    ]).then(([periodResult, orgResult, templateResult, filterResult]) => {
-      if (periodResult.error) setError(periodResult.error.message);
-      const rows = (periodResult.data || []) as Period[];
-      setPeriods(rows); if (rows[0]) setPeriod(rows[0].id);
-      if (!orgResult.error) { setIndustry(orgResult.data?.industry || ""); setFiscalStartMonth(Number(orgResult.data?.fiscal_year_start_month || 1)); }
-      if (!templateResult.error) setTemplates(templateResult.data || []);
-      if (!filterResult.error) setOptions(filterResult.data || {});
-      setLoading(false);
-    });
-  }, [supabase]);
+  useEffect(() => { const id = window.sessionStorage.getItem("activeOrganizationId") || ""; setOrganizationId(id); if (!id) return; void (async () => { const [{ data: ps, error: pe }, { data: fo }, { data: org }, { data: profile }] = await Promise.all([supabase.from("financial_periods").select("id,period_start,period_end,status").eq("organization_id", id).order("period_start", { ascending: true }), supabase.rpc("get_reporting_filter_options", { p_organization_id: id }), supabase.from("organizations").select("fiscal_year_start_month").eq("id", id).maybeSingle(), supabase.from("organization_tax_profiles").select("regime,zakat_method,saudi_ownership_percent,income_tax_rate,zakat_rate").eq("organization_id", id).maybeSingle()]); if (pe) { setError(pe.message); setLoading(false); return; } const list = (ps || []) as Period[]; setPeriods(list); setOptions(fo || {}); setFiscalMonth(Number(org?.fiscal_year_start_month || 1)); if (profile) setTaxProfile(profile); const last = list[list.length - 1]; if (last) { setSelectedPeriod(last.id); setStartDate(last.period_start); setEndDate(last.period_end); } })(); }, []);
+  const periodsByDate = useMemo(() => periods.filter((p) => p.period_start >= startDate && p.period_end <= endDate), [periods, startDate, endDate]);
+  function setShortcut(next: "month" | "quarter" | "year") { setMode(next); const p = periods.find((x) => x.id === selectedPeriod) || periods[periods.length - 1]; if (!p) return; const d = new Date(`${p.period_end}T00:00:00`); let s: Date; let e: Date; if (next === "month") { s = new Date(d.getFullYear(), d.getMonth(), 1); e = new Date(d.getFullYear(), d.getMonth() + 1, 0); } else if (next === "quarter") { const q = Math.floor(d.getMonth() / 3); s = new Date(d.getFullYear(), q * 3, 1); e = new Date(d.getFullYear(), q * 3 + 3, 0); } else { s = new Date(d.getFullYear(), fiscalMonth - 1, 1); if (d.getMonth() + 1 < fiscalMonth) s = new Date(d.getFullYear() - 1, fiscalMonth - 1, 1); e = new Date(s.getFullYear() + 1, fiscalMonth - 1, 0); } setStartDate(iso(s)); setEndDate(iso(e)); }
+  function selectPeriod(id: string) { setSelectedPeriod(id); const p = periods.find((x) => x.id === id); if (!p) return; setStartDate(p.period_start); setEndDate(p.period_end); setMode("month"); }
+  async function loadStatements() { if (!organizationId || !startDate || !endDate) return; setLoading(true); setError(""); try { const next: Record<StatementKey, any> = { balance: null, income: null, oci: null, cash: null, equity: null }; for (const key of statements) { const f = filters[key]; const { data: result, error: rpcError } = await supabase.rpc("get_financial_statements_date_range", { p_organization_id: organizationId, p_start_date: startDate, p_end_date: endDate, p_branch_id: f.branch || null, p_department_id: f.department || null, p_cost_center_id: f.cost_center || null, p_region_id: f.region || null, p_product_id: f.product || null, p_project_id: f.project || null, p_account_id: f.account || null, p_cash_flow_method: cashMethod }); if (rpcError) throw rpcError; next[key] = key === "balance" ? result?.balance_sheet : key === "income" ? result?.income_statement : key === "cash" ? result?.cash_flow : key === "equity" ? result?.equity_statement : result?.other_comprehensive_income; } setData(next); } catch (e: any) { setError(e?.message || "تعذر تحميل القوائم المالية"); } finally { setLoading(false); } }
+  useEffect(() => { if (organizationId && startDate && endDate) void loadStatements(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [organizationId, startDate, endDate, cashMethod]);
+  async function calculateTax() { if (!organizationId || !selectedPeriod) return; setTaxLoading(true); setTaxResult(null); const f = filters.balance; const { data: result, error: rpcError } = await supabase.rpc("calculate_tax_zakat_engine", { p_organization_id: organizationId, p_period_id: selectedPeriod, p_branch_id: f.branch || null, p_department_id: f.department || null, p_cost_center_id: f.cost_center || null, p_region_id: f.region || null, p_product_id: f.product || null, p_project_id: f.project || null, p_regime: taxProfile.regime, p_zakat_method: taxProfile.zakat_method, p_saudi_ownership_percent: Number(taxProfile.saudi_ownership_percent), p_income_tax_rate: Number(taxProfile.income_tax_rate), p_zakat_rate: Number(taxProfile.zakat_rate) }); setTaxLoading(false); if (rpcError) setError(rpcError.message); else setTaxResult(result); }
 
-  const filters = filtersByStatement[active];
-  const activeTemplate = useMemo(() => templates.find((item) => item.template_key === template), [templates, template]);
-  const preferredTerms = activeTemplate?.config?.preferred_terms || {};
-  const activeFilterCount = Object.values(filters).filter(Boolean).length;
-  const selectedPeriod = periods.find((item) => item.id === period);
-  const reportStart = useMemo(() => {
-    if (!selectedPeriod) return "";
-    const end = new Date(`${selectedPeriod.period_end}T00:00:00`);
-    const month = Number(fiscalStartMonth || 1);
-    const year = end.getMonth() + 1 < month ? end.getFullYear() - 1 : end.getFullYear();
-    return isoStart(year, month);
-  }, [selectedPeriod, fiscalStartMonth]);
-  const reportRange = selectedPeriod ? `من ${date(reportStart)} إلى ${date(selectedPeriod.period_end)}` : "";
-
-  const setFilters = (next: Filters) => { setFiltersByStatement((prev) => ({ ...prev, [active]: next })); setData(null); setOci(null); setEquityRollforward(null); };
-  const chooseTemplate = (value: string) => { setTemplate(value); if (org) window.localStorage.setItem(`fpa:statement-template:${org}`, value); setData(null); };
-  const chooseMethod = (value: string) => { setCashMethod(value); if (org) window.localStorage.setItem(`fpa:cash-method:${org}`, value); setData(null); };
-
-  async function load() {
-    if (!org || !period) return;
-    setRunning(true); setError("");
-    const args = { p_organization_id: org, p_period_id: period, p_branch_id: filters.branch || null, p_department_id: filters.department || null, p_cost_center_id: filters.cost_center || null, p_region_id: filters.region || null, p_product_id: filters.product || null, p_project_id: filters.project || null, p_account_id: filters.account || null, p_cash_flow_method: cashMethod };
-    const [statementResult, ociResult, equityResult] = await Promise.all([
-      supabase.rpc("get_financial_statements_v2", args),
-      supabase.rpc("get_other_comprehensive_income", { p_organization_id: org, p_period_id: period, p_branch_id: filters.branch || null, p_department_id: filters.department || null, p_cost_center_id: filters.cost_center || null, p_region_id: filters.region || null, p_product_id: filters.product || null, p_project_id: filters.project || null }),
-      supabase.rpc("get_equity_rollforward", { p_organization_id: org, p_period_id: period, p_branch_id: filters.branch || null, p_department_id: filters.department || null, p_cost_center_id: filters.cost_center || null, p_region_id: filters.region || null, p_product_id: filters.product || null, p_project_id: filters.project || null, p_account_id: filters.account || null }),
-    ]);
-    if (statementResult.error) { setError(statementResult.error.message); setData(null); } else setData(statementResult.data as FS);
-    if (ociResult.error) { setOci(null); if (!statementResult.error) setError(`تعذر تحميل قائمة الدخل الشامل الآخر: ${ociResult.error.message}`); } else setOci(ociResult.data as OCI);
-    if (equityResult.error) { setEquityRollforward(null); if (!statementResult.error) setError(`تعذر تحميل قائمة التغيرات في حقوق الملكية: ${equityResult.error.message}`); } else setEquityRollforward(equityResult.data);
-    setRunning(false);
-  }
-
-  async function calculateTax() {
-    if (!org || !period || taxRegime === "close") return;
-    setTaxRunning(true); setTaxResult(null);
-    const r = await supabase.rpc("calculate_tax_zakat", { p_organization_id: org, p_period_id: period, p_branch_id: filters.branch || null, p_department_id: filters.department || null, p_cost_center_id: filters.cost_center || null, p_region_id: filters.region || null, p_product_id: filters.product || null, p_project_id: filters.project || null, p_regime: taxRegime, p_saudi_ownership_percent: Number(saudiOwnership || 0), p_income_tax_rate: 20, p_zakat_rate: 2.5 });
-    if (r.error) setError(r.error.message); else setTaxResult(r.data);
-    setTaxRunning(false);
-  }
-
-  const headerPeriod = active === "balance" ? `كما في ${selectedPeriod ? date(selectedPeriod.period_end) : ""}` : `${reportRange} — الفترة المنتهية في ${selectedPeriod ? date(selectedPeriod.period_end) : ""}`;
-  const displayedEquity = equityRollforward?.closing_equity ?? data?.displayed_closing_equity ?? data?.total_equity;
-
-  if (loading) return <main dir="rtl" className="min-h-screen bg-[#f7f8fa] p-8 text-center text-sm text-slate-500">جاري تحميل مركز القوائم المالية...</main>;
-
-  return <main dir="rtl" className="min-h-screen bg-[#f7f8fa] text-[#172033]">
-    <header className="sticky top-0 z-30 border-b border-slate-200 bg-white"><div className="mx-auto flex max-w-[1500px] items-center justify-between gap-4 px-4 py-4 sm:px-6 lg:px-8"><a href="/workspace" className="text-sm font-semibold text-slate-500">العودة لمساحة العمل</a><div className="text-right"><p className="text-[10px] font-bold tracking-[.14em] text-slate-400">FINANCIAL REPORTING</p><h1 className="mt-1 font-bold text-slate-950">مركز القوائم المالية</h1></div></div></header>
-    <section className="mx-auto max-w-[1500px] px-4 py-6 sm:px-6 lg:px-8">
-      <div className="border-b border-slate-200 pb-6"><div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between"><div><p className="text-xs font-bold text-slate-400">{industry || "ملف النشاط"}</p><h2 className="mt-1 text-2xl font-bold text-slate-950 sm:text-3xl">{statementNames[active]}</h2><p className="mt-2 text-sm font-semibold text-slate-600">{headerPeriod}</p><p className="mt-1 max-w-4xl text-xs leading-5 text-slate-500">عرض مالي احترافي مرتبط بدفتر الأستاذ، مع فترة التقرير والسنة المالية والفلاتر التحليلية المستقلة لكل قائمة.</p></div><div className="flex flex-wrap gap-2"><select value={template} onChange={(e) => chooseTemplate(e.target.value)} className="min-h-10 rounded-lg border border-slate-300 bg-white px-3 text-sm font-semibold"><option value="standard">القالب القياسي</option>{templates.filter((item) => item.template_key !== "standard").map((item) => <option key={item.template_key} value={item.template_key}>{item.name_ar}</option>)}</select><select value={cashMethod} onChange={(e) => chooseMethod(e.target.value)} className="min-h-10 rounded-lg border border-slate-300 bg-white px-3 text-sm font-semibold"><option value="indirect">التدفقات — غير مباشرة</option><option value="direct">التدفقات — مباشرة</option></select><button onClick={() => { setTaxOpen(true); setTaxRegime("zakat"); setTaxResult(null); }} className="min-h-10 rounded-lg border border-slate-950 bg-white px-4 text-sm font-bold text-slate-950">احسب الزكاة / ضريبة الدخل</button></div></div></div>
-
-      <div className="mt-5 grid gap-3 lg:grid-cols-[1.2fr_auto]"><div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm"><div className="flex flex-wrap items-center gap-2">{statements.map((key) => <button key={key} onClick={() => { setActive(key); setData(null); setOci(null); setEquityRollforward(null); }} className={`min-h-10 rounded-lg px-4 text-sm font-bold ${active === key ? "bg-slate-950 text-white" : "bg-slate-50 text-slate-700 hover:bg-slate-100"}`}>{statementNames[key]}</button>)}</div></div><div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm"><select value={period} onChange={(e) => { setPeriod(e.target.value); setData(null); setOci(null); setEquityRollforward(null); }} className="min-h-10 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm font-semibold">{periods.map((item) => <option key={item.id} value={item.id}>{date(item.period_start)} — {date(item.period_end)}</option>)}</select></div></div>
-
-      <div className="mt-3"><FilterBar options={options} filters={filters} onChange={setFilters} onClear={() => setFilters(emptyFilters())} /></div>
-      <div className="mt-3 flex flex-wrap items-center justify-between gap-3"><p className="text-xs text-slate-500">{activeFilterCount ? `${activeFilterCount} فلتر مطبق على ${statementNames[active]}` : `بدون فلاتر إضافية — ${statementNames[active]}`}</p><button disabled={!period || running} onClick={load} className="min-h-11 rounded-xl bg-slate-950 px-6 text-sm font-bold text-white disabled:opacity-50">{running ? "جاري الحساب..." : "تطبيق الفلاتر وإعادة الحساب"}</button></div>
-
-      {error && <div className="mt-4 rounded-xl border border-red-200 bg-red-50 p-4 text-sm font-semibold text-red-700">{error}</div>}
-      {data && <div className="mt-5 space-y-5">
-        {active === "balance" && <Balance data={data} />}
-        {active === "income" && <Income data={data?.income_statement_period || data?.income_statement_ytd || data} terms={preferredTerms} />}
-        {active === "oci" && <OCIView data={oci} />}
-        {active === "cash" && <CashFlow data={data} />}
-        {active === "equity" && <Equity data={{ ...(data || {}), ...(equityRollforward || {}), rows: equityRollforward?.rows || data?.rows, displayed_closing_equity: displayedEquity, ytd_net_income: equityRollforward?.net_income ?? data?.ytd_net_income }} />}
-        <div className="rounded-xl border border-slate-200 bg-white p-4 text-xs text-slate-500"><strong className="text-slate-700">ملاحظة العرض:</strong> قائمة المركز المالي تُعرض "كما في" تاريخ التقرير، بينما قوائم الأداء والتدفقات والتغيرات في حقوق الملكية تُعرض "عن الفترة المنتهية في" تاريخ التقرير. تم تصميم التسميات لتتوافق مع عرض القوائم المالية وفق IFRS/المعايير المعتمدة في المملكة، مع دعم متطلبات العرض المستقبلية لـ IFRS 18.</div>
-      </div>}
-      {!data && !running && <div className="mt-8"><Empty text="اختر الفترة والفلاتر ثم اضغط تطبيق لعرض القائمة." /></div>}
-    </section>
-    {taxOpen && <TaxPanel result={taxResult} regime={taxRegime} setRegime={(value) => { if (value === "close") { setTaxOpen(false); return; } setTaxRegime(value); setTaxResult(null); }} ownership={saudiOwnership} setOwnership={setSaudiOwnership} onCalculate={calculateTax} running={taxRunning} />}
+  return <main dir="rtl" className="min-h-screen bg-[#f7f8fa] text-slate-900"><div className="mx-auto w-full max-w-[1500px] px-4 py-6 sm:px-6 lg:px-8"><div className="border-b border-slate-200 pb-5"><div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between"><div><p className="text-[10px] font-bold tracking-[0.16em] text-slate-400">FINANCIAL REPORTING</p><h1 className="mt-2 text-2xl font-bold text-slate-950">القوائم المالية</h1><p className="mt-2 text-sm text-slate-500">تقارير مالية قابلة للتصفية وفق نطاق زمني واضح ومعالجة قابلة للمراجعة</p></div><button type="button" onClick={() => { setTaxOpen(true); void calculateTax(); }} className="min-h-11 bg-slate-950 px-5 text-sm font-bold text-white hover:bg-slate-800">حساب الزكاة / ضريبة الدخل</button></div></div>
+  <div className="mt-5 border border-slate-200 bg-white p-4"><div className="flex flex-wrap items-center gap-2"><span className="text-xs font-bold text-slate-500">الفترة</span><button type="button" onClick={() => setShortcut("month")} className={`min-h-9 border px-4 text-xs font-bold ${mode === "month" ? "border-slate-950 bg-slate-950 text-white" : "border-slate-300 bg-white"}`}>شهر</button><button type="button" onClick={() => setShortcut("quarter")} className={`min-h-9 border px-4 text-xs font-bold ${mode === "quarter" ? "border-slate-950 bg-slate-950 text-white" : "border-slate-300 bg-white"}`}>ربع سنة</button><button type="button" onClick={() => setShortcut("year")} className={`min-h-9 border px-4 text-xs font-bold ${mode === "year" ? "border-slate-950 bg-slate-950 text-white" : "border-slate-300 bg-white"}`}>سنة مالية</button><button type="button" onClick={() => setMode("custom")} className={`min-h-9 border px-4 text-xs font-bold ${mode === "custom" ? "border-slate-950 bg-slate-950 text-white" : "border-slate-300 bg-white"}`}>من / إلى</button><select value={selectedPeriod} onChange={(e) => selectPeriod(e.target.value)} className="min-h-9 min-w-48 border border-slate-300 bg-white px-3 text-xs font-semibold"><option value="">اختيار فترة</option>{periods.map((p) => <option key={p.id} value={p.id}>{formatDate(p.period_start)} — {formatDate(p.period_end)}</option>)}</select><label className="flex items-center gap-2 text-xs font-semibold text-slate-500">من<input type="date" value={startDate} onChange={(e) => { setMode("custom"); setStartDate(e.target.value); }} className="min-h-9 border border-slate-300 bg-white px-2 text-xs" /></label><label className="flex items-center gap-2 text-xs font-semibold text-slate-500">إلى<input type="date" value={endDate} onChange={(e) => { setMode("custom"); setEndDate(e.target.value); }} className="min-h-9 border border-slate-300 bg-white px-2 text-xs" /></label><select value={cashMethod} onChange={(e) => setCashMethod(e.target.value as "direct" | "indirect")} className="min-h-9 border border-slate-300 bg-white px-3 text-xs font-semibold"><option value="indirect">التدفقات — غير مباشر</option><option value="direct">التدفقات — مباشر</option></select><button type="button" onClick={() => void loadStatements()} className="min-h-9 bg-slate-950 px-4 text-xs font-bold text-white">تطبيق</button></div><div className="mt-3 flex flex-wrap gap-2 text-xs text-slate-500"><span className="border border-slate-200 bg-slate-50 px-3 py-1.5">من {startDate ? formatDate(startDate) : "—"} إلى {endDate ? formatDate(endDate) : "—"}</span><span className="border border-slate-200 bg-slate-50 px-3 py-1.5">الفترات المحتسبة: {periodsByDate.length}</span></div></div>
+  {error && <div className="mt-4 border border-red-200 bg-red-50 p-4 text-sm font-semibold text-red-700">{error}</div>}
+  {loading ? <div className="mt-5 flex min-h-72 items-center justify-center border border-slate-200 bg-white text-sm text-slate-500">جارٍ تحميل القوائم وفق النطاق والفلاتر…</div> : <div className="mt-5 space-y-5">{statements.map((key) => <section key={key} className="overflow-hidden border border-slate-200 bg-white"><Heading title={statementNames[key]} start={startDate} end={endDate} asOf={key === "balance"} /><FilterBar options={options} filters={filters[key]} onChange={(f) => setFilters((prev) => ({ ...prev, [key]: f }))} />{key === "balance" ? <Balance data={data.balance} /> : key === "income" ? <Income data={data.income} /> : key === "cash" ? <Cash data={data.cash} /> : key === "equity" ? <Equity data={data.equity} /> : <Oci data={data.oci} />}</section>)}</div>}
+  </div>
+  {taxOpen && <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 p-4"><div className="max-h-[90vh] w-full max-w-4xl overflow-y-auto border border-slate-200 bg-white shadow-2xl"><div className="flex items-center justify-between border-b border-slate-200 p-5"><div><h2 className="text-lg font-bold">محرك الزكاة وضريبة الدخل</h2><p className="mt-1 text-xs text-slate-500">النتيجة تعتمد على خريطة الحسابات والتعديلات المعتمدة وليست ضرب صافي الربح في نسبة ثابتة</p></div><button type="button" onClick={() => setTaxOpen(false)} className="text-xl text-slate-400">×</button></div><div className="grid gap-3 border-b border-slate-200 bg-slate-50 p-5 md:grid-cols-5"><select value={taxProfile.regime} onChange={(e) => setTaxProfile((x: any) => ({ ...x, regime: e.target.value }))} className="border border-slate-300 bg-white px-3 py-2 text-xs"><option value="zakat">زكاة</option><option value="income_tax">ضريبة دخل</option><option value="mixed">مختلط</option><option value="none">لا شيء</option></select><select value={taxProfile.zakat_method} onChange={(e) => setTaxProfile((x: any) => ({ ...x, zakat_method: e.target.value }))} className="border border-slate-300 bg-white px-3 py-2 text-xs"><option value="indirect">الزكاة — غير مباشرة</option><option value="direct">الزكاة — مباشرة</option></select><input type="number" value={taxProfile.saudi_ownership_percent} onChange={(e) => setTaxProfile((x: any) => ({ ...x, saudi_ownership_percent: e.target.value }))} className="border border-slate-300 bg-white px-3 py-2 text-xs" placeholder="الملكية السعودية %" /><input type="number" value={taxProfile.income_tax_rate} onChange={(e) => setTaxProfile((x: any) => ({ ...x, income_tax_rate: e.target.value }))} className="border border-slate-300 bg-white px-3 py-2 text-xs" placeholder="ضريبة الدخل %" /><input type="number" value={taxProfile.zakat_rate} onChange={(e) => setTaxProfile((x: any) => ({ ...x, zakat_rate: e.target.value }))} className="border border-slate-300 bg-white px-3 py-2 text-xs" placeholder="الزكاة %" /></div><div className="p-5"><button type="button" onClick={() => void calculateTax()} className="mb-5 min-h-10 bg-slate-950 px-5 text-sm font-bold text-white">إعادة الحساب</button>{taxLoading ? <p className="text-sm text-slate-500">جارٍ الحساب والتحقق من الخرائط…</p> : taxResult ? <div className="space-y-5"><div className={`border p-4 text-sm font-bold ${taxResult.status === "ready_for_review" ? "border-amber-200 bg-amber-50 text-amber-800" : "border-red-200 bg-red-50 text-red-800"}`}>الحالة: {taxResult.status === "ready_for_review" ? "جاهز للمراجعة والاعتماد" : "البيانات غير مكتملة / تحتاج مراجعة"}</div><div className="grid gap-4 md:grid-cols-2"><Section title="ضريبة الدخل"><Row label="الربح المحاسبي قبل الضريبة" value={taxResult.income_tax?.accounting_profit_before_tax} /><Row label="إضافات خريطة الحسابات" value={taxResult.income_tax?.mapping_additions} /><Row label="إضافات يدوية معتمدة" value={taxResult.income_tax?.manual_additions} /><Row label="خصومات خريطة الحسابات" value={taxResult.income_tax?.mapping_deductions} /><Row label="خصومات يدوية معتمدة" value={taxResult.income_tax?.manual_deductions} /><Row label="الربح الخاضع للضريبة" value={taxResult.income_tax?.taxable_profit} strong /><Row label="ضريبة الدخل الحالية" value={taxResult.income_tax?.current_income_tax} strong /></Section><Section title="الزكاة"><Row label="الأصول الزكوية" value={taxResult.zakat?.direct?.zakatable_assets} /><Row label="الالتزامات القابلة للخصم" value={taxResult.zakat?.direct?.deductible_liabilities} /><Row label="الوعاء — مباشرة" value={taxResult.zakat?.direct?.base} /><Row label="المصادر الداخلية" value={taxResult.zakat?.indirect?.internal_sources} /><Row label="الربح المعدل" value={taxResult.zakat?.indirect?.adjusted_profit} /><Row label="التمويل الخارجي" value={taxResult.zakat?.indirect?.external_financing} /><Row label="الأصول غير الزكوية" value={taxResult.zakat?.indirect?.non_zakatable_assets} /><Row label="الوعاء — غير مباشرة" value={taxResult.zakat?.indirect?.base} /><Row label="الزكاة الحالية" value={taxResult.zakat?.current_zakat} strong /></Section></div><div className="border border-slate-200 bg-slate-50 p-4 text-sm"><p className="font-bold">اكتمال البيانات</p><p className="mt-2">خرائط ضريبة الدخل غير المكتملة: {taxResult.completeness?.missing_income_tax_mappings} — الخرائط الزكوية غير المكتملة: {taxResult.completeness?.missing_zakat_mappings}</p>{(taxResult.warnings || []).map((w: string) => <p key={w} className="mt-2 text-amber-700">• {w}</p>)}</div><p className="mt-4 text-xs leading-6 text-slate-500">{taxResult.disclaimer}</p></div> : <p className="text-sm text-slate-500">اضغط إعادة الحساب لعرض النتيجة.</p>}</div></div></div>}
   </main>;
 }
