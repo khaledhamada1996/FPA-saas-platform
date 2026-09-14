@@ -1,0 +1,22 @@
+-- jsonb_each returns jsonb values; compare explicitly with JSON boolean false.
+
+create or replace function public.validate_accounting_model(p_organization_id uuid,p_period_id uuid)
+returns jsonb language plpgsql security definer set search_path=''
+as $function$
+declare v_user uuid := (select auth.uid()); v_period record; v_tb jsonb; v_fs jsonb; v_fiscal_month smallint; v_fiscal_year_start date; v_pnl_opening_debit bigint:=0; v_pnl_opening_credit bigint:=0; v_unclassified integer:=0; v_checks jsonb; v_failures jsonb; v_pass boolean;
+begin
+ if v_user is null then raise exception 'AUTH_REQUIRED'; end if;
+ if not public.has_org_permission(p_organization_id,'view') then raise exception 'FORBIDDEN'; end if;
+ select fp.id,fp.organization_id,fp.period_start,fp.period_end,fp.status,o.fiscal_year_start_month into v_period from public.financial_periods fp join public.organizations o on o.id=fp.organization_id where fp.id=p_period_id and fp.organization_id=p_organization_id;
+ if v_period.id is null then raise exception 'FINANCIAL_PERIOD_NOT_FOUND'; end if;
+ v_tb:=public.get_trial_balance(p_organization_id,p_period_id); v_fs:=public.get_financial_statements(p_organization_id,p_period_id);
+ v_fiscal_month:=greatest(1,least(12,v_period.fiscal_year_start_month)); v_fiscal_year_start:=make_date(extract(year from v_period.period_start)::integer-case when extract(month from v_period.period_start)::integer<v_fiscal_month then 1 else 0 end,v_fiscal_month,1);
+ select coalesce(sum(coalesce(f.debit_minor,0)),0)::bigint,coalesce(sum(coalesce(f.credit_minor,0)),0)::bigint into v_pnl_opening_debit,v_pnl_opening_credit from public.financial_facts f join public.accounts a on a.id=f.account_id and a.organization_id=p_organization_id join public.financial_periods fp on fp.id=f.financial_period_id and fp.organization_id=p_organization_id where f.organization_id=p_organization_id and f.fact_type='actual' and f.status='published' and fp.period_start<v_period.period_start and fp.period_start>=v_fiscal_year_start and lower(coalesce(a.statement_type,''))='income_statement' and public.has_org_data_scope(f.organization_id,'legal_entity',f.legal_entity_id) and public.has_org_data_scope(f.organization_id,'branch',f.branch_id) and public.has_org_data_scope(f.organization_id,'department',f.department_id) and public.has_org_data_scope(f.organization_id,'cost_center',f.cost_center_id) and public.has_org_data_scope(f.organization_id,'region',f.region_id) and public.has_org_data_scope(f.organization_id,'product',f.product_id) and public.has_org_data_scope(f.organization_id,'project',f.project_id);
+ v_unclassified:=coalesce((v_fs->'validation'->>'unclassified_income_accounts')::integer,0);
+ v_checks:=jsonb_build_object('period_debits_equal_credits',coalesce((v_tb->>'period_difference')::bigint,1)=0,'opening_debits_equal_credits',coalesce((v_tb->>'opening_difference')::bigint,1)=0,'closing_debits_equal_credits',coalesce((v_tb->>'closing_difference')::bigint,1)=0,'balance_sheet_balances',coalesce((v_fs->'validation'->>'balance_sheet_difference')::bigint,1)=0,'income_statement_accounts_classified',v_unclassified=0,'published_actuals_only',true,'pnl_resets_at_fiscal_year_start',case when v_period.period_start=v_fiscal_year_start then v_pnl_opening_debit=0 and v_pnl_opening_credit=0 else true end);
+ v_failures:=coalesce((select jsonb_agg(key) from jsonb_each(v_checks) where value='false'::jsonb),'[]'::jsonb); v_pass:=jsonb_array_length(v_failures)=0;
+ return jsonb_build_object('organization_id',p_organization_id,'period_id',p_period_id,'period_start',v_period.period_start,'period_end',v_period.period_end,'fiscal_year_start',v_fiscal_year_start,'pass',v_pass,'checks',v_checks,'failures',v_failures,'trial_balance',jsonb_build_object('period_difference',v_tb->>'period_difference','opening_difference',v_tb->>'opening_difference','closing_difference',v_tb->>'closing_difference'),'financial_statements',jsonb_build_object('balance_sheet_difference',v_fs->'validation'->>'balance_sheet_difference','unclassified_income_accounts',v_unclassified),'methodology',jsonb_build_object('published_actuals_only',true,'fiscal_year_aware',true,'pnl_reset_control',true,'balance_sheet_cumulative_control',true,'classification_control',true));
+end;
+$function$;
+revoke all on function public.validate_accounting_model(uuid,uuid) from public,anon;
+grant execute on function public.validate_accounting_model(uuid,uuid) to authenticated;
