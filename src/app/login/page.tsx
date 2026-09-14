@@ -8,8 +8,24 @@ const REMEMBER_EMAIL_KEY = "fpa.rememberedEmail";
 const REMEMBER_LOGIN_KEY = "fpa.rememberLogin";
 
 function safeNextPath(value: string | null) {
-  if (!value || !value.startsWith("/") || value.startsWith("//")) return "";
-  return value;
+  if (!value) return "";
+
+  try {
+    const url = new URL(value, window.location.origin);
+    if (url.origin !== window.location.origin) return "";
+    if (url.username || url.password) return "";
+    if (url.pathname.includes("\\")) return "";
+
+    const isAllowedRoute =
+      url.pathname === "/start" ||
+      url.pathname === "/workspace" ||
+      url.pathname.startsWith("/invite/");
+
+    if (!isAllowedRoute) return "";
+    return `${url.pathname}${url.search}${url.hash}`;
+  } catch {
+    return "";
+  }
 }
 
 type CredentialManagerWindow = Window & {
