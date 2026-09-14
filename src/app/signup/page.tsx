@@ -3,12 +3,17 @@
 import { FormEvent, useEffect, useState } from "react";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 
+function safeNextPath(value: string | null) {
+  if (!value || !value.startsWith("/") || value.startsWith("//")) return "";
+  return value;
+}
+
 export default function SignupPage() {
   const [email,setEmail]=useState(""); const [password,setPassword]=useState(""); const [confirmPassword,setConfirmPassword]=useState(""); const [status,setStatus]=useState<"idle"|"loading"|"sent">("idle"); const [error,setError]=useState(""); const [nextPath,setNextPath]=useState("");
 
   useEffect(() => {
-    const next = new URLSearchParams(window.location.search).get("next");
-    if (next && next.startsWith("/")) setNextPath(next);
+    const next = safeNextPath(new URLSearchParams(window.location.search).get("next"));
+    if (next) setNextPath(next);
   }, []);
 
   async function signUp(event:FormEvent<HTMLFormElement>){event.preventDefault();setError("");if(password!==confirmPassword){setError("كلمتا المرور غير متطابقتين.");return;}if(password.length<6){setError("يجب أن تتكون كلمة المرور من 6 أحرف أو أكثر.");return;}setStatus("loading");try{const supabase=getSupabaseBrowserClient();const safeNext=nextPath||"/start";const emailRedirectTo=`${window.location.origin}/auth/callback?next=${encodeURIComponent(safeNext)}`;const {data,error:signUpError}=await supabase.auth.signUp({email:email.trim(),password,options:{emailRedirectTo}});if(signUpError)throw signUpError;if(data.session){window.location.replace(safeNext);return;}setStatus("sent");}catch(caughtError){setError(caughtError instanceof Error?caughtError.message:"تعذر إنشاء الحساب.");setStatus("idle");}}
