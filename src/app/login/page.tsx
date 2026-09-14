@@ -7,6 +7,11 @@ import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 const REMEMBER_EMAIL_KEY = "fpa.rememberedEmail";
 const REMEMBER_LOGIN_KEY = "fpa.rememberLogin";
 
+function safeNextPath(value: string | null) {
+  if (!value || !value.startsWith("/") || value.startsWith("//")) return "";
+  return value;
+}
+
 type CredentialManagerWindow = Window & {
   PasswordCredential?: new (data: { id: string; password: string; name?: string }) => Credential;
 };
@@ -23,11 +28,11 @@ export default function LoginPage() {
   useEffect(() => {
     const rememberedEmail = window.localStorage.getItem(REMEMBER_EMAIL_KEY);
     const rememberedLogin = window.localStorage.getItem(REMEMBER_LOGIN_KEY);
-    const requestedNext = new URLSearchParams(window.location.search).get("next");
+    const requestedNext = safeNextPath(new URLSearchParams(window.location.search).get("next"));
 
     if (rememberedEmail) setEmail(rememberedEmail);
     if (rememberedLogin !== null) setRememberMe(rememberedLogin === "true");
-    if (requestedNext && requestedNext.startsWith("/")) setNextPath(requestedNext);
+    if (requestedNext) setNextPath(requestedNext);
   }, []);
 
   async function saveBrowserCredential() {
