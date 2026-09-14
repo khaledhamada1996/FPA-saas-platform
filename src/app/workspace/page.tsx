@@ -28,7 +28,8 @@ const navigation: NavItem[] = [
   ["screen.ai_analyst.view","المحلل المالي الذكي","/workspace/ai-analyst"],
   ["screen.team.view","الفريق والصلاحيات","/workspace/team"],
   ["screen.audit.view","سجل العمليات","/workspace/audit"],
-  ["screen.company_profile.view","ملف الشركة","/workspace/company-profile"];
+  ["screen.company_profile.view","ملف الشركة","/workspace/company-profile"]
+];
 const dataItems: NavItem[] = [
   ["screen.data.view","رفع البيانات","/workspace/data/import"],
   ["screen.data.view","الإدخال اليدوي","/workspace/data/manual"],
