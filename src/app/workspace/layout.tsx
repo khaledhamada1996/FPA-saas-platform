@@ -7,7 +7,7 @@ import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 const routePermissions: Array<[string, string]> = [
   ["/workspace/executive-dashboard", "screen.executive_dashboard.view"], ["/workspace/actuals", "screen.actuals.view"],
   ["/workspace/group-reporting", "screen.group_reporting.view"], ["/workspace/data-monitoring/connectors", "screen.connector_management.view"], ["/workspace/integrations", "screen.connector_management.view"], ["/workspace/data-monitoring", "screen.data_monitoring.view"],
-  ["/workspace/data/master-data", "screen.master_data_import.view"], ["/workspace/data/history", "screen.data_history.view"], ["/workspace/data/accounts", "screen.accounts.view"], ["/workspace/data", "screen.data.view"],
+  ["/workspace/data/master-data", "screen.master_data_import.view"], ["/workspace/data/history", "screen.data_history.view"], ["/workspace/data/accounts", "screen.accounts.view"], ["/workspace/data-hub", "screen.data.view"], ["/workspace/data", "screen.data.view"],
   ["/workspace/trial-balance", "screen.trial_balance.view"], ["/workspace/financial-statements", "screen.financial_statements.view"],
   ["/workspace/financial-analysis", "screen.financial_analysis.view"], ["/workspace/budget", "screen.budget.view"], ["/workspace/forecast", "screen.forecast.view"],
   ["/workspace/variance", "screen.variance.view"], ["/workspace/cash", "screen.cash.view"], ["/workspace/scenarios", "screen.scenarios.view"],
@@ -33,12 +33,10 @@ export default function WorkspaceLayout({ children }: Readonly<{ children: React
       if (!data.user) { router.replace(`/login?next=${encodeURIComponent(pathname || "/workspace")}`); return; }
       const organizationId = window.sessionStorage.getItem("activeOrganizationId");
       if (!organizationId) { router.replace("/start"); return; }
-
       const { data: onboarding, error: onboardingError } = await supabase.rpc("get_company_onboarding_status", { p_organization_id: organizationId });
       if (onboardingError) { if (active) setStatus("denied"); router.replace("/start"); return; }
       const setup = onboarding?.[0] as { completed?: boolean; next_route?: string } | undefined;
       if (!setup?.completed) { router.replace("/onboarding"); return; }
-
       const { data: access, error } = await supabase.rpc("get_my_org_access", { p_organization_id: organizationId });
       if (error) { if (active) setStatus("denied"); router.replace(`/workspace/access-denied?reason=access-check`); return; }
       const requiredPermission = permissionForPath(pathname || "/workspace");
