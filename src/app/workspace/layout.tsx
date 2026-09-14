@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
+import WorkspaceSidebar from "@/components/workspace/workspace-sidebar";
 
 const routePermissions: Array<[string, string, string]> = [
   ["/workspace/executive-dashboard", "screen.executive_dashboard.view", "لوحة المؤشرات"],
@@ -37,6 +38,11 @@ function permissionForPath(pathname: string) {
   return routePermissions.find(([path]) => pathname === path || pathname.startsWith(`${path}/`));
 }
 
+function AccessDenied({ name }: { name: string }) {
+  const router = useRouter();
+  return <section className="mx-auto flex min-h-[calc(100vh-4rem)] w-full max-w-2xl items-center justify-center px-4 py-10 sm:px-6" dir="rtl"><div className="w-full border border-slate-200 bg-white p-7 text-center shadow-sm sm:p-10"><p className="text-xs font-bold tracking-[0.16em] text-slate-400">FP&A ACCESS CONTROL</p><h1 className="mt-4 text-2xl font-bold text-slate-950 sm:text-3xl">ليس لديك صلاحية الدخول إلى {name}</h1><p className="mx-auto mt-4 max-w-lg text-sm leading-7 text-slate-500 sm:text-base">ليس لديك الصلاحية المطلوبة لاستخدام هذه الشاشة. تواصل مع مدير النظام لفتح الصلاحية لك.</p><div className="mt-7 flex flex-col justify-center gap-3 sm:flex-row"><button type="button" onClick={() => router.push("/workspace")} className="bg-slate-950 px-6 py-3.5 text-sm font-bold text-white hover:bg-slate-800">العودة إلى مساحة العمل</button><button type="button" onClick={() => router.push("/start")} className="border border-slate-300 bg-white px-6 py-3.5 text-sm font-bold text-slate-700 hover:bg-slate-50">شركاتي</button></div></div></section>;
+}
+
 export default function WorkspaceLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   const router = useRouter();
   const pathname = usePathname();
@@ -65,9 +71,7 @@ export default function WorkspaceLayout({ children }: Readonly<{ children: React
     return () => { active = false; listener.subscription.unsubscribe(); };
   }, [pathname, required, router]);
 
-  if (status === "denied") {
-    return <main className="min-h-screen bg-[#f7f8fa] text-[#172033]" dir="rtl"><div className="mx-auto flex min-h-screen w-full max-w-2xl items-center justify-center px-4 py-10 sm:px-6"><section className="w-full border border-slate-200 bg-white p-7 text-center shadow-sm sm:p-10"><p className="text-xs font-bold tracking-[0.16em] text-slate-400">FP&A ACCESS CONTROL</p><h1 className="mt-4 text-2xl font-bold text-slate-950 sm:text-3xl">ليس لديك صلاحية الدخول إلى {deniedName}</h1><p className="mx-auto mt-4 max-w-lg text-sm leading-7 text-slate-500 sm:text-base">ليس لديك الصلاحية المطلوبة لاستخدام هذه الشاشة. تواصل مع مدير النظام لفتح الصلاحية لك.</p><div className="mt-7 flex flex-col justify-center gap-3 sm:flex-row"><button type="button" onClick={() => router.push("/workspace")} className="bg-slate-950 px-6 py-3.5 text-sm font-bold text-white hover:bg-slate-800">العودة إلى مساحة العمل</button><button type="button" onClick={() => router.push("/start")} className="border border-slate-300 bg-white px-6 py-3.5 text-sm font-bold text-slate-700 hover:bg-slate-50">شركاتي</button></div></section></div></main>;
-  }
-  if (status !== "authenticated") return <main className="min-h-screen bg-[#f7f8fa] text-[#172033]" dir="rtl"><div className="mx-auto flex min-h-screen max-w-3xl items-center justify-center px-4"><p className="text-sm text-slate-500">جارٍ التحقق من الوصول…</p></div></main>;
-  return children;
+  if (status !== "authenticated") return <main className="min-h-screen bg-[#f7f8fa] text-[#172033]" dir="rtl"><div className="mx-auto flex min-h-screen max-w-3xl items-center justify-center px-4"><p className="text-sm text-slate-500">{status === "denied" ? "جارٍ تجهيز شاشة الوصول…" : "جارٍ التحقق من الوصول…"}</p></div></main>;
+
+  return <main className="min-h-screen bg-[#f7f8fa] text-slate-900" dir="rtl"><div className="mx-auto grid min-h-screen w-full max-w-[1500px] items-start lg:grid-cols-[250px_minmax(0,1fr)]"><WorkspaceSidebar /><section className="min-w-0 lg:col-start-2 lg:row-start-1">{status === "denied" ? <AccessDenied name={deniedName} /> : children}</section></div></main>;
 }
