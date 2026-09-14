@@ -20,6 +20,12 @@ a { overflow-wrap: anywhere; }
 textarea.input { min-height: 120px; padding-block: 0.8rem; }
 .container-fluid { width: min(calc(100% - (var(--page-gutter) * 2)), var(--content-max)); margin-inline: auto; }
 .page-gutter { padding-inline: var(--page-gutter); }
+
+/* Application status palette: neutral UI, red only for errors. */
+[class*="text-emerald-"], [class*="text-amber-"] { color: #475569 !important; }
+[class*="bg-emerald-"], [class*="bg-amber-"] { background-color: #f8fafc !important; }
+[class*="border-emerald-"], [class*="border-amber-"] { border-color: #cbd5e1 !important; }
+
 @media (min-width: 1536px) { :root { --content-max: 1500px; } }
 @media (max-width: 640px) { body { font-size: 15px; } .page-gutter { padding-inline: 1rem; } .input { min-height: 46px; font-size: 16px; } }
 @media (min-width: 641px) and (max-width: 1024px) { :root { --page-gutter: clamp(1.25rem, 3vw, 2rem); } }
