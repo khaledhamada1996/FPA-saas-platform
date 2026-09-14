@@ -13,6 +13,16 @@ test("unauthenticated workspace access is rejected", async ({ page }) => {
   await expect(page).toHaveURL(/\/login\?next=%2Fworkspace|\/login\?next=\/workspace/);
 });
 
+test("legacy dashboard remains a redirect-only compatibility surface", async ({ page }) => {
+  await page.goto("/dashboard");
+  await expect(page).toHaveURL(/\/login\?next=%2Fworkspace|\/login\?next=\/workspace/);
+});
+
+test("chart of accounts compatibility route never resolves to import review", async ({ page }) => {
+  await page.goto("/workspace/data/chart-of-accounts");
+  await expect(page).toHaveURL(/\/login\?next=.*workspace%2Fdata%2Fchart-of-accounts|\/login\?next=.*workspace\/data\/chart-of-accounts/);
+});
+
 test("authenticated workspace journey", async ({ page }) => {
   test.skip(!process.env.E2E_EMAIL || !process.env.E2E_PASSWORD, "Set E2E_EMAIL and E2E_PASSWORD for the authenticated release journey.");
 
