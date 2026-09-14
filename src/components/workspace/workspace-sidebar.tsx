@@ -41,7 +41,17 @@ const dataItems: NavItem[] = [
 function NavLink({ item, allowed, pathname, indent = false }: { item: NavItem; allowed: Set<string>; pathname: string; indent?: boolean }) {
   const enabled = allowed.has(item[0]);
   const active = pathname === item[2] || pathname.startsWith(`${item[2]}/`);
-  return <Link href={item[2]} title={enabled ? item[1] : `ليس لديك صلاحية الدخول إلى ${item[1]}`} aria-current={active ? "page" : undefined} className={`flex items-center justify-between border-b border-slate-100 py-2.5 text-sm ${indent ? "pr-3 pl-2" : "px-3"} ${active ? "bg-slate-50 font-bold text-slate-950" : enabled ? "font-semibold text-slate-700 hover:bg-slate-50" : "text-slate-400 hover:bg-slate-50"}`}><span className="truncate">{item[1]}</span><span aria-hidden="true">{enabled ? "›" : "🔒"}</span></Link>;
+  const className = `flex items-center justify-between border-b border-slate-100 py-2.5 text-sm ${indent ? "pr-3 pl-2" : "px-3"} ${active ? "bg-slate-50 font-bold text-slate-950" : enabled ? "font-semibold text-slate-700 hover:bg-slate-50" : "cursor-not-allowed text-slate-400"}`;
+
+  if (!enabled) {
+    return <div aria-disabled="true" title={`ليس لديك صلاحية الدخول إلى ${item[1]}`} className={className}>
+      <span className="truncate">{item[1]}</span><span aria-hidden="true">🔒</span>
+    </div>;
+  }
+
+  return <Link href={item[2]} title={item[1]} aria-current={active ? "page" : undefined} className={className}>
+    <span className="truncate">{item[1]}</span><span aria-hidden="true">›</span>
+  </Link>;
 }
 
 export default function WorkspaceSidebar() {
@@ -68,12 +78,12 @@ export default function WorkspaceSidebar() {
   const enabledCount = navigation.filter((item) => allowed.has(item[0])).length;
   const dataActive = pathname === "/workspace/data" || pathname.startsWith("/workspace/data/") || pathname === "/workspace/actuals";
 
-  return <aside className="sticky top-[72px] z-30 h-[calc(100vh-72px)] min-h-0 self-start overflow-y-auto overscroll-contain border-l border-slate-200 bg-white p-3 max-lg:relative max-lg:top-0 max-lg:h-auto max-lg:border-l-0 max-lg:border-b">
+  return <aside className="sticky top-[84px] z-30 h-[calc(100vh-84px)] min-h-0 self-start overflow-y-auto overscroll-contain border-l border-slate-200 bg-white p-3 max-lg:relative max-lg:top-0 max-lg:h-auto max-lg:border-l-0 max-lg:border-b">
     <div className="mb-3 border-b border-slate-100 px-3 pb-3"><p className="text-[10px] font-bold tracking-[.16em] text-slate-400">FP&A WORKSPACE</p><p className="mt-1 text-sm font-bold">مساحة العمل</p><p className="mt-1 text-xs text-slate-400">المتاح لك: {enabledCount} من {navigation.length}</p></div>
     <nav>
       <NavLink item={navigation[0]} allowed={allowed} pathname={pathname}/>
       <div className="border-b border-slate-100">
-        <button type="button" onClick={() => setDataOpen((value) => !value)} className={`flex w-full items-center justify-between px-3 py-2.5 text-right text-sm ${dataActive ? "bg-slate-50 font-bold text-slate-950" : allowed.has("screen.data.view") ? "font-bold text-slate-700 hover:bg-slate-50" : "text-slate-400 hover:bg-slate-50"}`} aria-expanded={dataOpen}>
+        <button type="button" onClick={() => setDataOpen((value) => !value)} className={`flex w-full items-center justify-between px-3 py-2.5 text-right text-sm ${dataActive ? "bg-slate-50 font-bold text-slate-950" : allowed.has("screen.data.view") ? "font-bold text-slate-700 hover:bg-slate-50" : "text-slate-400"}`} aria-expanded={dataOpen}>
           <span>مركز البيانات المالية</span><span aria-hidden="true">{dataOpen ? "⌄" : "›"}</span>
         </button>
         {dataOpen && <div className="mr-3 border-r border-slate-200 pr-2">{dataItems.map((item) => <NavLink key={item[2]} item={item} allowed={allowed} pathname={pathname} indent/>)}</div>}
