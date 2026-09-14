@@ -108,7 +108,7 @@ export default function ImportHistoryPage() {
     <main dir="rtl" className="min-h-screen bg-[#f7f8fa] text-[#172033]">
       <header className="border-b border-slate-200 bg-white">
         <div className="mx-auto flex max-w-[1500px] items-center justify-between px-4 py-4 sm:px-6 lg:px-8">
-          <Link href="/workspace/data" className="text-sm font-semibold text-slate-500">
+          <Link href="/workspace/data/import" className="text-sm font-semibold text-slate-500">
             ← استيراد جديد
           </Link>
           <div className="text-right">
@@ -133,7 +133,7 @@ export default function ImportHistoryPage() {
         )}
 
         <div className="mt-5 flex flex-wrap gap-2">
-          {[["all", "كل الأنواع"], ...Object.entries(types)].map(([key, label]) => (
+          {[['all', 'كل الأنواع'], ...Object.entries(types)].map(([key, label]) => (
             <button
               key={key}
               onClick={() => setFilter(key)}
