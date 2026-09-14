@@ -5,8 +5,30 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 
 function safeNextPath(value: string | null) {
-  if (!value || !value.startsWith("/") || value.startsWith("//")) return "/start";
-  return value;
+  if (!value) return "/start";
+
+  try {
+    const url = new URL(value, window.location.origin);
+
+    // Only allow redirects back to this application.
+    if (url.origin !== window.location.origin) return "/start";
+    if (url.username || url.password) return "/start";
+    if (url.pathname.includes("\\")) return "/start";
+
+    // Keep the callback destination limited to routes used by the auth flow.
+    const isAllowedRoute =
+      url.pathname === "/start" ||
+      url.pathname === "/workspace" ||
+      url.pathname.startsWith("/invite/");
+
+    if (!isAllowedRoute) return "/start";
+
+    // Rebuild the destination from the validated URL rather than returning the
+    // raw query-string value to router.replace().
+    return `${url.pathname}${url.search}${url.hash}`;
+  } catch {
+    return "/start";
+  }
 }
 
 function AuthCallbackContent() {
