@@ -5,30 +5,20 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 
 function safeNextPath(value: string | null) {
-  if (!value) return "/start";
+  if (value === "/start" || value === "/workspace") return value;
 
-  try {
-    const url = new URL(value, window.location.origin);
-
-    // Only allow redirects back to this application.
-    if (url.origin !== window.location.origin) return "/start";
-    if (url.username || url.password) return "/start";
-    if (url.pathname.includes("\\")) return "/start";
-
-    // Keep the callback destination limited to routes used by the auth flow.
-    const isAllowedRoute =
-      url.pathname === "/start" ||
-      url.pathname === "/workspace" ||
-      url.pathname.startsWith("/invite/");
-
-    if (!isAllowedRoute) return "/start";
-
-    // Rebuild the destination from the validated URL rather than returning the
-    // raw query-string value to router.replace().
-    return `${url.pathname}${url.search}${url.hash}`;
-  } catch {
-    return "/start";
+  // Invite callbacks are rebuilt from a restricted token alphabet. No URL,
+  // protocol, host, query string, hash, or path supplied by the caller is
+  // forwarded to the navigation sink.
+  const prefix = "/invite/";
+  if (value?.startsWith(prefix)) {
+    const token = value.slice(prefix.length);
+    if (/^[A-Za-z0-9_-]+$/.test(token)) {
+      return `${prefix}${token}`;
+    }
   }
+
+  return "/start";
 }
 
 function AuthCallbackContent() {
@@ -41,12 +31,17 @@ function AuthCallbackContent() {
     async function completeAuth() {
       try {
         const supabase = getSupabaseBrowserClient();
-        const next = safeNextPath(searchParams.get("next"));
+        const requestedNext = searchParams.get("next");
+        const next = safeNextPath(requestedNext);
         const { data, error } = await supabase.auth.getSession();
         if (error) throw error;
         if (!active) return;
 
-        router.replace(data.session ? next : "/login?confirmed=1");
+        if (data.session) {
+          router.replace(next);
+        } else {
+          router.replace("/login?confirmed=1");
+        }
       } catch {
         if (active) router.replace("/login?error=confirmation");
       }
