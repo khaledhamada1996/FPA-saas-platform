@@ -5,98 +5,17 @@ security definer
 set search_path = ''
 as $function$
 declare
-  p record;
-  fy date;
-  rows jsonb;
-  opening_total bigint;
-  closing_total bigint;
-  contribution bigint;
-  distribution bigint;
-  retained bigint;
-  profit bigint;
-  oci bigint;
-  recon bigint;
+  p record; fy date; rows jsonb; opening_total bigint; closing_total bigint; contribution bigint; distribution bigint; retained bigint; profit bigint; oci bigint; recon bigint;
 begin
   if auth.uid() is null then raise exception 'Authentication required'; end if;
   if not (public.has_org_permission(p_organization_id,'screen.financial_statements.view') or public.has_org_permission(p_organization_id,'statements.view') or public.has_org_permission(p_organization_id,'view')) then raise exception 'Financial statements view permission required'; end if;
-  select fp.period_start, fp.period_end, o.fiscal_year_start_month into p
-  from public.financial_periods fp join public.organizations o on o.id=fp.organization_id
-  where fp.id=p_period_id and fp.organization_id=p_organization_id;
+  select fp.period_start,fp.period_end,o.fiscal_year_start_month into p from public.financial_periods fp join public.organizations o on o.id=fp.organization_id where fp.id=p_period_id and fp.organization_id=p_organization_id;
   if p.period_start is null then raise exception 'Financial period not found'; end if;
   fy:=make_date(extract(year from p.period_start)::integer-case when extract(month from p.period_start)::integer<greatest(1,least(12,p.fiscal_year_start_month)) then 1 else 0 end,greatest(1,least(12,p.fiscal_year_start_month)),1);
-  with scoped as materialized (
-    select f.account_id,f.debit_minor,f.credit_minor,fp.period_end,a.code,a.name,a.equity_rollforward_role
-    from public.financial_facts f
-    join public.financial_periods fp on fp.id=f.financial_period_id
-    join public.accounts a on a.id=f.account_id and a.organization_id=p_organization_id
-    where f.organization_id=p_organization_id and f.fact_type='actual' and f.status='published'
-      and a.statement_subclassification='equity'
-      and public.has_org_data_scope(f.organization_id,'legal_entity',f.legal_entity_id)
-      and public.has_org_data_scope(f.organization_id,'branch',f.branch_id)
-      and public.has_org_data_scope(f.organization_id,'department',f.department_id)
-      and public.has_org_data_scope(f.organization_id,'cost_center',f.cost_center_id)
-      and public.has_org_data_scope(f.organization_id,'region',f.region_id)
-      and public.has_org_data_scope(f.organization_id,'product',f.product_id)
-      and public.has_org_data_scope(f.organization_id,'project',f.project_id)
-      and (p_branch_id is null or f.branch_id=p_branch_id)
-      and (p_department_id is null or f.department_id=p_department_id)
-      and (p_cost_center_id is null or f.cost_center_id=p_cost_center_id)
-      and (p_region_id is null or f.region_id=p_region_id)
-      and (p_product_id is null or f.product_id=p_product_id)
-      and (p_project_id is null or f.project_id=p_project_id)
-      and (p_account_id is null or f.account_id=p_account_id)
-  ), agg as (
-    select code,name,equity_rollforward_role,
-      coalesce(sum(debit_minor-credit_minor) filter(where period_end<fy),0)::bigint opening,
-      coalesce(sum(debit_minor-credit_minor) filter(where period_end<=p.period_end),0)::bigint closing
-    from scoped group by code,name,equity_rollforward_role
-  ), totals as (
-    select
-      coalesce(sum(opening) filter(where equity_rollforward_role is distinct from 'current_year_profit'),0)::bigint opening_total,
-      coalesce(sum(closing) filter(where equity_rollforward_role is distinct from 'current_year_profit'),0)::bigint closing_total,
-      coalesce(sum(closing-opening) filter(where equity_rollforward_role='capital_contribution'),0)::bigint contribution,
-      coalesce(sum(closing-opening) filter(where equity_rollforward_role='owner_distribution'),0)::bigint distribution,
-      coalesce(sum(closing-opening) filter(where equity_rollforward_role='retained_earnings'),0)::bigint retained,
-      coalesce(sum(closing-opening) filter(where equity_rollforward_role='other_comprehensive_income'),0)::bigint oci
-    from agg
-  )
-  select t.opening_total,t.closing_total,t.contribution,t.distribution,t.retained,t.oci
-  into opening_total,closing_total,contribution,distribution,retained,oci from totals t;
+  with scoped as materialized (select f.debit_minor,f.credit_minor,fp.period_end,a.code,a.name,a.equity_rollforward_role from public.financial_facts f join public.financial_periods fp on fp.id=f.financial_period_id join public.accounts a on a.id=f.account_id and a.organization_id=p_organization_id where f.organization_id=p_organization_id and f.fact_type='actual' and f.status='published' and a.statement_subclassification='equity' and public.has_org_data_scope(f.organization_id,'legal_entity',f.legal_entity_id) and public.has_org_data_scope(f.organization_id,'branch',f.branch_id) and public.has_org_data_scope(f.organization_id,'department',f.department_id) and public.has_org_data_scope(f.organization_id,'cost_center',f.cost_center_id) and public.has_org_data_scope(f.organization_id,'region',f.region_id) and public.has_org_data_scope(f.organization_id,'product',f.product_id) and public.has_org_data_scope(f.organization_id,'project',f.project_id) and (p_branch_id is null or f.branch_id=p_branch_id) and (p_department_id is null or f.department_id=p_department_id) and (p_cost_center_id is null or f.cost_center_id=p_cost_center_id) and (p_region_id is null or f.region_id=p_region_id) and (p_product_id is null or f.product_id=p_product_id) and (p_project_id is null or f.project_id=p_project_id) and (p_account_id is null or f.account_id=p_account_id)), agg as (select code,name,equity_rollforward_role,coalesce(sum(debit_minor-credit_minor) filter(where period_end<fy),0)::bigint opening,coalesce(sum(debit_minor-credit_minor) filter(where period_end<=p.period_end),0)::bigint closing from scoped group by code,name,equity_rollforward_role), totals as (select coalesce(sum(opening) filter(where equity_rollforward_role is distinct from 'current_year_profit'),0)::bigint opening_total,coalesce(sum(closing) filter(where equity_rollforward_role is distinct from 'current_year_profit'),0)::bigint closing_total,coalesce(sum(closing-opening) filter(where equity_rollforward_role='capital_contribution'),0)::bigint contribution,coalesce(sum(closing-opening) filter(where equity_rollforward_role='owner_distribution'),0)::bigint distribution,coalesce(sum(closing-opening) filter(where equity_rollforward_role='retained_earnings'),0)::bigint retained,coalesce(sum(closing-opening) filter(where equity_rollforward_role='other_comprehensive_income'),0)::bigint oci from agg) select t.opening_total,t.closing_total,t.contribution,t.distribution,t.retained,t.oci into opening_total,closing_total,contribution,distribution,retained,oci from totals t;
   profit:=coalesce((public.get_financial_statements(p_organization_id,p_period_id,p_branch_id,p_department_id,p_cost_center_id,p_region_id,p_product_id,p_project_id,p_account_id,'indirect')->'income_statement_ytd'->>'net_income')::bigint,0);
-  with scoped as (
-    select f.account_id,f.debit_minor,f.credit_minor,fp.period_end,a.code,a.name,a.equity_rollforward_role
-    from public.financial_facts f
-    join public.financial_periods fp on fp.id=f.financial_period_id
-    join public.accounts a on a.id=f.account_id and a.organization_id=p_organization_id
-    where f.organization_id=p_organization_id and f.fact_type='actual' and f.status='published'
-      and a.statement_subclassification='equity'
-      and public.has_org_data_scope(f.organization_id,'legal_entity',f.legal_entity_id)
-      and public.has_org_data_scope(f.organization_id,'branch',f.branch_id)
-      and public.has_org_data_scope(f.organization_id,'department',f.department_id)
-      and public.has_org_data_scope(f.organization_id,'cost_center',f.cost_center_id)
-      and public.has_org_data_scope(f.organization_id,'region',f.region_id)
-      and public.has_org_data_scope(f.organization_id,'product',f.product_id)
-      and public.has_org_data_scope(f.organization_id,'project',f.project_id)
-      and (p_branch_id is null or f.branch_id=p_branch_id)
-      and (p_department_id is null or f.department_id=p_department_id)
-      and (p_cost_center_id is null or f.cost_center_id=p_cost_center_id)
-      and (p_region_id is null or f.region_id=p_region_id)
-      and (p_product_id is null or f.product_id=p_product_id)
-      and (p_project_id is null or f.project_id=p_project_id)
-      and (p_account_id is null or f.account_id=p_account_id)
-  ), agg as (
-    select code,name,equity_rollforward_role,
-      coalesce(sum(debit_minor-credit_minor) filter(where period_end<fy),0)::bigint opening,
-      coalesce(sum(debit_minor-credit_minor) filter(where period_end<=p.period_end),0)::bigint closing
-    from scoped group by code,name,equity_rollforward_role
-  )
-  select coalesce(jsonb_agg(jsonb_build_object(
-    'code',code,'name',name,'role',equity_rollforward_role,
-    'opening',case when equity_rollforward_role='current_year_profit' then 0 else opening end,
-    'movement',case when equity_rollforward_role='current_year_profit' then profit else closing-opening end,
-    'closing',case when equity_rollforward_role='current_year_profit' then profit else closing end
-  ) order by code),'[]'::jsonb) into rows from agg;
-  recon:=closing_total-opening_total-(contribution+distribution+retained+profit+oci);
+  with scoped as (select f.debit_minor,f.credit_minor,fp.period_end,a.code,a.name,a.equity_rollforward_role from public.financial_facts f join public.financial_periods fp on fp.id=f.financial_period_id join public.accounts a on a.id=f.account_id and a.organization_id=p_organization_id where f.organization_id=p_organization_id and f.fact_type='actual' and f.status='published' and a.statement_subclassification='equity' and public.has_org_data_scope(f.organization_id,'legal_entity',f.legal_entity_id) and public.has_org_data_scope(f.organization_id,'branch',f.branch_id) and public.has_org_data_scope(f.organization_id,'department',f.department_id) and public.has_org_data_scope(f.organization_id,'cost_center',f.cost_center_id) and public.has_org_data_scope(f.organization_id,'region',f.region_id) and public.has_org_data_scope(f.organization_id,'product',f.product_id) and public.has_org_data_scope(f.organization_id,'project',f.project_id) and (p_branch_id is null or f.branch_id=p_branch_id) and (p_department_id is null or f.department_id=p_department_id) and (p_cost_center_id is null or f.cost_center_id=p_cost_center_id) and (p_region_id is null or f.region_id=p_region_id) and (p_product_id is null or f.product_id=p_product_id) and (p_project_id is null or f.project_id=p_project_id) and (p_account_id is null or f.account_id=p_account_id)), agg as (select code,name,equity_rollforward_role,coalesce(sum(debit_minor-credit_minor) filter(where period_end<fy),0)::bigint opening,coalesce(sum(debit_minor-credit_minor) filter(where period_end<=p.period_end),0)::bigint closing from scoped group by code,name,equity_rollforward_role) select coalesce(jsonb_agg(jsonb_build_object('code',code,'name',name,'role',equity_rollforward_role,'opening',case when equity_rollforward_role='current_year_profit' then 0 else opening end,'movement',case when equity_rollforward_role='current_year_profit' then profit else closing-opening end,'closing',case when equity_rollforward_role='current_year_profit' then profit else closing end) order by code),'[]'::jsonb) into rows from agg;
+  recon:=closing_total-opening_total-(contribution+distribution+retained+oci);
   return jsonb_build_object('rows',rows,'opening_equity',opening_total,'capital_contributions',contribution,'owner_distributions',distribution,'retained_earnings_movement',retained,'net_income',profit,'other_comprehensive_income',oci,'total_comprehensive_income',profit+oci,'closing_equity',closing_total+profit,'rollforward_difference',recon,'unclassified_equity_movement',recon);
 end;
 $function$;
