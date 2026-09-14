@@ -18,5 +18,9 @@ jobs:
         run: bun install
       - name: TypeScript validation
         run: bun run typecheck
-      - name: Build application
+      - name: Production build
         run: bun run build
+      - name: Install Chromium for E2E
+        run: bunx playwright install --with-deps chromium
+      - name: E2E smoke tests
+        run: bun run test:e2e
