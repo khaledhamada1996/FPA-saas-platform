@@ -40,7 +40,7 @@ function WorkspaceContextBar() {
 
   const activeCompany = companies.find((company) => company.id === activeId) || companies[0];
 
-  async function switchCompany(company: Company) {
+  function switchCompany(company: Company) {
     window.sessionStorage.setItem("activeOrganizationId", company.id);
     setActiveId(company.id);
     setOpen(false);
@@ -52,35 +52,34 @@ function WorkspaceContextBar() {
     router.replace("/login");
   }
 
-  return <header className="sticky top-0 z-40 border-b border-slate-200 bg-white" dir="rtl">
-    <div className="mx-auto flex min-h-[72px] w-full max-w-[1500px] items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
-      <div className="flex items-center gap-3">
+  return <header className="sticky top-0 z-40 border-b border-slate-200 bg-white" dir="ltr">
+    <div className="mx-auto flex min-h-[84px] w-full max-w-[1500px] items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
+      <div className="relative flex w-[270px] flex-col gap-1.5" dir="rtl">
         <div className="relative">
-          <button type="button" onClick={() => { setProfileOpen((v) => !v); setOpen(false); }} className="flex items-center gap-3 rounded-lg px-2 py-1.5 text-right hover:bg-slate-50" aria-expanded={profileOpen}>
-            {user.avatar ? <img src={user.avatar} alt="" className="h-9 w-9 rounded-full object-cover border border-slate-200" /> : <span className="flex h-9 w-9 items-center justify-center rounded-full bg-slate-900 text-xs font-bold text-white">{user.name.slice(0, 1).toUpperCase()}</span>}
-            <span className="hidden min-w-0 sm:block"><span className="block max-w-[180px] truncate text-sm font-bold text-slate-900">{user.name}</span><span className="block max-w-[220px] truncate text-[11px] text-slate-400">{user.email}</span></span>
+          <button type="button" onClick={() => { setProfileOpen((v) => !v); setOpen(false); }} className="flex w-full items-center gap-3 rounded-lg px-2 py-1.5 text-right hover:bg-slate-50" aria-expanded={profileOpen}>
+            {user.avatar ? <img src={user.avatar} alt="" className="h-9 w-9 shrink-0 rounded-full border border-slate-200 object-cover" /> : <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-slate-900 text-xs font-bold text-white">{user.name.slice(0, 1).toUpperCase()}</span>}
+            <span className="min-w-0 flex-1"><span className="block max-w-[210px] truncate text-sm font-bold text-slate-900">{user.name}</span><span className="block max-w-[230px] truncate text-[11px] text-slate-400">{user.email}</span></span>
             <span className="text-xs text-slate-400">⌄</span>
           </button>
-          {profileOpen && <div className="absolute right-0 top-full mt-2 w-64 border border-slate-200 bg-white p-2 shadow-lg">
+          {profileOpen && <div className="absolute left-0 top-full mt-2 w-72 border border-slate-200 bg-white p-2 shadow-lg">
             <div className="border-b border-slate-100 px-3 py-3"><p className="text-sm font-bold text-slate-900">{user.name}</p><p className="mt-1 break-all text-xs text-slate-500">{user.email}</p></div>
             <button type="button" onClick={() => router.push("/workspace/company-profile")} className="mt-1 w-full px-3 py-2.5 text-right text-sm font-semibold text-slate-700 hover:bg-slate-50">ملف الشركة</button>
             <button type="button" onClick={() => router.push("/start")} className="w-full px-3 py-2.5 text-right text-sm font-semibold text-slate-700 hover:bg-slate-50">إدارة الشركات</button>
             <button type="button" onClick={() => void signOut()} className="w-full px-3 py-2.5 text-right text-sm font-semibold text-red-600 hover:bg-red-50">تسجيل الخروج</button>
           </div>}
         </div>
-
-        <div className="relative border-r border-slate-200 pr-3">
-          <button type="button" onClick={() => { setOpen((v) => !v); setProfileOpen(false); }} className="flex min-w-[190px] items-center justify-between gap-4 rounded-lg px-3 py-2 text-right hover:bg-slate-50" aria-expanded={open}>
-            <span className="min-w-0"><span className="block text-[10px] font-bold text-slate-400">الشركة الحالية</span><span className="mt-0.5 block max-w-[170px] truncate text-sm font-bold text-slate-900">{activeCompany?.name || "اختر الشركة"}</span></span><span className="text-xs text-slate-400">⌄</span>
+        <div className="relative w-full">
+          <button type="button" onClick={() => { setOpen((v) => !v); setProfileOpen(false); }} className="flex w-full items-center justify-between gap-3 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-right hover:border-slate-300 hover:bg-white" aria-expanded={open}>
+            <span className="min-w-0"><span className="block text-[9px] font-bold text-slate-400">الشركة الحالية</span><span className="mt-0.5 block truncate text-xs font-bold text-slate-900">{activeCompany?.name || "اختر الشركة"}</span></span><span className="text-xs text-slate-400">⌄</span>
           </button>
-          {open && <div className="absolute right-0 top-full mt-2 w-72 border border-slate-200 bg-white p-2 shadow-lg">
+          {open && <div className="absolute left-0 top-full z-50 mt-2 w-full border border-slate-200 bg-white p-2 shadow-lg">
             <p className="px-3 py-2 text-[10px] font-bold tracking-wide text-slate-400">شركاتك</p>
-            {companies.length ? companies.map((company) => <button key={company.id} type="button" onClick={() => void switchCompany(company)} className={`flex w-full items-center justify-between px-3 py-3 text-right hover:bg-slate-50 ${company.id === activeId ? "bg-slate-50" : ""}`}><span className="min-w-0"><span className="block truncate text-sm font-bold text-slate-900">{company.name}</span><span className="mt-0.5 block text-[11px] text-slate-400">{company.role}</span></span>{company.id === activeId && <span className="text-sm font-bold text-slate-900">✓</span>}</button>) : <p className="px-3 py-4 text-sm text-slate-500">لا توجد شركات مرتبطة بالحساب</p>}
+            {companies.length ? companies.map((company) => <button key={company.id} type="button" onClick={() => switchCompany(company)} className={`flex w-full items-center justify-between px-3 py-3 text-right hover:bg-slate-50 ${company.id === activeId ? "bg-slate-50" : ""}`}><span className="min-w-0"><span className="block truncate text-sm font-bold text-slate-900">{company.name}</span><span className="mt-0.5 block text-[11px] text-slate-400">{company.role}</span></span>{company.id === activeId && <span className="text-sm font-bold text-slate-900">✓</span>}</button>) : <p className="px-3 py-4 text-sm text-slate-500">لا توجد شركات مرتبطة بالحساب</p>}
             <button type="button" onClick={() => router.push("/start")} className="mt-1 w-full border-t border-slate-100 px-3 py-3 text-right text-sm font-bold text-slate-700 hover:bg-slate-50">إدارة الشركات ←</button>
           </div>}
         </div>
       </div>
-      <div className="hidden text-left sm:block"><p className="text-[10px] font-bold tracking-[0.16em] text-slate-400">FP&A WORKSPACE</p><p className="mt-1 text-xs font-semibold text-slate-500">مساحة العمل المالية</p></div>
+      <div className="text-right" dir="rtl"><p className="text-[10px] font-bold tracking-[0.16em] text-slate-400">FP&A WORKSPACE</p><p className="mt-1 text-xs font-semibold text-slate-500">مساحة العمل المالية</p></div>
     </div>
   </header>;
 }
@@ -89,5 +88,5 @@ export default function WorkspaceLayout({ children }: Readonly<{ children: React
   const router = useRouter(); const pathname = usePathname(); const [status, setStatus] = useState<"loading" | "authenticated" | "denied">("loading"); const [deniedName, setDeniedName] = useState("هذه الشاشة"); const required = useMemo(() => permissionForPath(pathname || "/workspace"), [pathname]);
   useEffect(() => { if (pathname === "/workspace/access-denied") { setStatus("authenticated"); return; } const supabase = getSupabaseBrowserClient(); let active = true; async function authorize() { const { data } = await supabase.auth.getUser(); if (!data.user) { router.replace(`/login?next=${encodeURIComponent(pathname || "/workspace")}`); return; } const organizationId = window.sessionStorage.getItem("activeOrganizationId"); if (!organizationId) { router.replace("/start"); return; } if (!required || pathname === "/workspace") { if (active) setStatus("authenticated"); return; } const { data: access, error } = await supabase.rpc("get_my_org_access", { p_organization_id: organizationId }); if (error) { if (active) { setDeniedName(required[2]); setStatus("denied"); } return; } const allowed = (access ?? []).some((item: { permission_key?: string; granted?: boolean }) => item.permission_key === required[1] && item.granted === true); if (!allowed) { if (active) { setDeniedName(required[2]); setStatus("denied"); } return; } if (active) setStatus("authenticated"); } void authorize(); const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => { if (!active) return; if (!session?.user) router.replace(`/login?next=${encodeURIComponent(pathname || "/workspace")}`); }); return () => { active = false; listener.subscription.unsubscribe(); }; }, [pathname, required, router]);
   if (status === "loading") return <main className="min-h-screen bg-[#f7f8fa] text-[#172033]" dir="rtl"><div className="flex min-h-screen items-center justify-center px-4"><p className="text-sm text-slate-500">جارٍ التحقق من الوصول…</p></div></main>;
-  return <main className="min-h-screen bg-[#f7f8fa] text-slate-900" dir="rtl"><WorkspaceContextBar/><div className="mx-auto grid min-h-[calc(100vh-72px)] w-full max-w-[1500px] items-start lg:grid-cols-[250px_minmax(0,1fr)]"><WorkspaceSidebar/><section className="min-w-0 lg:col-start-2 lg:row-start-1">{status === "denied" ? <AccessDenied name={deniedName}/> : children}</section></div></main>;
+  return <main className="min-h-screen bg-[#f7f8fa] text-slate-900" dir="rtl"><WorkspaceContextBar/><div className="mx-auto grid min-h-[calc(100vh-84px)] w-full max-w-[1500px] items-start lg:grid-cols-[270px_minmax(0,1fr)]"><WorkspaceSidebar/><section className="min-w-0 lg:col-start-2 lg:row-start-1">{status === "denied" ? <AccessDenied name={deniedName}/> : children}</section></div></main>;
 }
