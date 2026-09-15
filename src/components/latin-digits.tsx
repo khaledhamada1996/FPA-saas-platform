@@ -3,112 +3,74 @@
 import { useEffect } from "react";
 
 const DIGIT_MAP: Record<string, string> = {
-  "٠": "0",
-  "١": "1",
-  "٢": "2",
-  "٣": "3",
-  "٤": "4",
-  "٥": "5",
-  "٦": "6",
-  "٧": "7",
-  "٨": "8",
-  "٩": "9",
-  "۰": "0",
-  "۱": "1",
-  "۲": "2",
-  "۳": "3",
-  "۴": "4",
-  "۵": "5",
-  "۶": "6",
-  "۷": "7",
-  "۸": "8",
-  "۹": "9",
+  "٠": "0", "١": "1", "٢": "2", "٣": "3", "٤": "4",
+  "٥": "5", "٦": "6", "٧": "7", "٨": "8", "٩": "9",
+  "۰": "0", "۱": "1", "۲": "2", "۳": "3", "۴": "4",
+  "۵": "5", "۶": "6", "۷": "7", "۸": "8", "۹": "9",
 };
 
-const LATIN_DIGITS = /[٠-٩۰-۹]/g;
+const LATIN_DIGITS = /[٠-٩۰-۹]/;
 
 function normalizeDigits(value: string) {
-  return value.replace(LATIN_DIGITS, (digit) => DIGIT_MAP[digit] ?? digit);
-}
-
-function normalizeElement(element: Element) {
-  const attributes = ["aria-label", "title", "placeholder"];
-  for (const attribute of attributes) {
-    const value = element.getAttribute(attribute);
-    if (value && LATIN_DIGITS.test(value)) {
-      element.setAttribute(attribute, normalizeDigits(value));
-    }
-    LATIN_DIGITS.lastIndex = 0;
-  }
-
-  if (element instanceof HTMLInputElement || element instanceof HTMLTextAreaElement) {
-    if (element.type !== "date" && element.type !== "datetime-local" && element.type !== "time") {
-      const value = element.value;
-      if (LATIN_DIGITS.test(value)) {
-        const normalized = normalizeDigits(value);
-        const start = element.selectionStart;
-        element.value = normalized;
-        if (start !== null) element.setSelectionRange(start, start);
-      }
-      LATIN_DIGITS.lastIndex = 0;
-    }
-  }
+  return value.replace(/[٠-٩۰-۹]/g, (digit) => DIGIT_MAP[digit] ?? digit);
 }
 
 function normalizeTextNode(node: Text) {
-  if (LATIN_DIGITS.test(node.nodeValue ?? "")) {
-    node.nodeValue = normalizeDigits(node.nodeValue ?? "");
-  }
-  LATIN_DIGITS.lastIndex = 0;
+  const value = node.nodeValue ?? "";
+  if (!LATIN_DIGITS.test(value)) return;
+  const normalized = normalizeDigits(value);
+  if (normalized !== value) node.nodeValue = normalized;
 }
 
-function normalizeTree(root: Node) {
-  if (root.nodeType === Node.TEXT_NODE) {
-    normalizeTextNode(root as Text);
+function normalizeAttributes(element: Element) {
+  for (const attribute of ["aria-label", "title", "placeholder"]) {
+    const value = element.getAttribute(attribute);
+    if (!value || !LATIN_DIGITS.test(value)) continue;
+    const normalized = normalizeDigits(value);
+    if (normalized !== value) element.setAttribute(attribute, normalized);
+  }
+}
+
+function normalizeAddedNode(node: Node) {
+  if (node.nodeType === Node.TEXT_NODE) {
+    normalizeTextNode(node as Text);
     return;
   }
+  if (node.nodeType !== Node.ELEMENT_NODE) return;
 
-  if (root.nodeType !== Node.ELEMENT_NODE && root.nodeType !== Node.DOCUMENT_NODE) return;
+  const element = node as Element;
+  normalizeAttributes(element);
+  element.querySelectorAll("[aria-label], [title], [placeholder]").forEach(normalizeAttributes);
 
-  if (root instanceof Element) normalizeElement(root);
-
-  const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
-  const textNodes: Text[] = [];
+  const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT);
   let current: Node | null = walker.nextNode();
   while (current) {
-    textNodes.push(current as Text);
+    normalizeTextNode(current as Text);
     current = walker.nextNode();
-  }
-  for (const textNode of textNodes) normalizeTextNode(textNode);
-
-  if (root instanceof Element) {
-    root.querySelectorAll("[aria-label], [title], [placeholder], input, textarea").forEach(normalizeElement);
   }
 }
 
 export function LatinDigits() {
   useEffect(() => {
-    normalizeTree(document.body);
+    const initialWalker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+    let current: Node | null = initialWalker.nextNode();
+    while (current) {
+      normalizeTextNode(current as Text);
+      current = initialWalker.nextNode();
+    }
+
+    document.body.querySelectorAll("[aria-label], [title], [placeholder]").forEach(normalizeAttributes);
 
     const observer = new MutationObserver((mutations) => {
-      observer.disconnect();
       for (const mutation of mutations) {
-        if (mutation.type === "characterData" && mutation.target.nodeType === Node.TEXT_NODE) {
+        if (mutation.type === "characterData") {
           normalizeTextNode(mutation.target as Text);
-        } else {
-          mutation.addedNodes.forEach(normalizeTree);
-          if (mutation.type === "attributes" && mutation.target instanceof Element) {
-            normalizeElement(mutation.target);
-          }
+        } else if (mutation.type === "childList") {
+          mutation.addedNodes.forEach(normalizeAddedNode);
+        } else if (mutation.type === "attributes") {
+          normalizeAttributes(mutation.target as Element);
         }
       }
-      observer.observe(document.body, {
-        subtree: true,
-        childList: true,
-        characterData: true,
-        attributes: true,
-        attributeFilter: ["aria-label", "title", "placeholder"],
-      });
     });
 
     observer.observe(document.body, {
@@ -119,30 +81,7 @@ export function LatinDigits() {
       attributeFilter: ["aria-label", "title", "placeholder"],
     });
 
-    const handleInput = (event: Event) => {
-      const target = event.target;
-      if (!(target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement)) return;
-      if (["date", "datetime-local", "time"].includes(target.type)) return;
-      const value = target.value;
-      if (!LATIN_DIGITS.test(value)) {
-        LATIN_DIGITS.lastIndex = 0;
-        return;
-      }
-      LATIN_DIGITS.lastIndex = 0;
-      const normalized = normalizeDigits(value);
-      if (normalized !== value) {
-        const cursor = target.selectionStart;
-        target.value = normalized;
-        if (cursor !== null) target.setSelectionRange(cursor, cursor);
-      }
-    };
-
-    document.addEventListener("input", handleInput, true);
-
-    return () => {
-      observer.disconnect();
-      document.removeEventListener("input", handleInput, true);
-    };
+    return () => observer.disconnect();
   }, []);
 
   return null;
