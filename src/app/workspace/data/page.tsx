@@ -8,7 +8,6 @@ const sections = [
   { title: "القيود اليومية", subtitle: "الحركات المالية التفصيلية التي يمكن تحويلها إلى بيانات فعلية معتمدة", href: "/workspace/data/import", action: "استيراد القيود", permission: "screen.data.view", formats: ["XLSX", "CSV"] },
   { title: "الأرصدة الافتتاحية", subtitle: "أرصدة الحسابات الموجودة قبل بدء إدخال قيود اليومية، مستقلة عن حركة الفترة", href: "/workspace/data/opening-balances", action: "إدارة الأرصدة الافتتاحية", permission: "screen.data.view", formats: ["يدوي"] },
   { title: "ميزان المراجعة", subtitle: "أرصدة الحسابات حسب الفترة عندما لا تتوفر الحركات التفصيلية", href: "/workspace/trial-balance", action: "فتح ميزان المراجعة", permission: "screen.trial_balance.view", formats: ["XLSX", "CSV"] },
-  { title: "الإدخال اليدوي", subtitle: "إضافة بيانات مالية يدويًا عند الحاجة بدلًا من رفع ملف", href: "/workspace/data/manual", action: "الإدخال اليدوي", permission: "screen.data.view", formats: ["يدوي"] },
   { title: "البيانات الفعلية", subtitle: "البيانات التي اجتازت التحقق والمطابقة وأصبحت جزءًا من النموذج المالي", href: "/workspace/actuals", action: "عرض Actuals", permission: "screen.actuals.view", formats: [] },
   { title: "سجل البيانات", subtitle: "تتبع عمليات الاستيراد وحالتها ومصدرها بدل فقدان أثر البيانات", href: "/workspace/data/history", action: "عرض السجل", permission: "screen.data_history.view", formats: [] },
 ];
@@ -33,7 +32,7 @@ export default function FinancialDataHub() {
     <header className="border-b border-slate-200 bg-white">
       <div className="mx-auto max-w-[1500px] px-4 py-6 sm:px-6 lg:px-8">
         <p className="text-[10px] font-bold tracking-[0.16em] text-slate-400">FINANCIAL DATA HUB</p>
-        <div className="mt-2 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between"><div><h1 className="text-2xl font-bold text-slate-950">مركز البيانات المالية</h1><p className="mt-2 max-w-3xl text-sm leading-7 text-slate-500">مكان واحد لإدارة مصادر البيانات المالية وتجهيزها قبل استخدامها في التخطيط والتحليل والتقارير. كل مصدر يحتفظ بدوره ولا يتم خلط القيود بالأرصدة الافتتاحية أو ميزان المراجعة أو دليل الحسابات.</p></div><span className="text-xs font-semibold text-slate-400">CSV · XLSX · إدخال يدوي</span></div>
+        <div className="mt-2 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between"><div><h1 className="text-2xl font-bold text-slate-950">مركز البيانات المالية</h1><p className="mt-2 max-w-3xl text-sm leading-7 text-slate-500">مكان واحد لإدارة مصادر البيانات المالية وتجهيزها قبل استخدامها في التخطيط والتحليل والتقارير. كل مصدر يحتفظ بدوره ولا يتم خلط القيود بالأرصدة الافتتاحية أو ميزان المراجعة أو دليل الحسابات.</p></div><span className="text-xs font-semibold text-slate-400">CSV · XLSX</span></div>
       </div>
     </header>
 
