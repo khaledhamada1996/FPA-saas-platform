@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { createClient } from "@/lib/supabase/client";
+import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 
 type FactSummary = { revenue:number; cogs:number; operatingExpense:number; otherIncome:number; otherExpense:number; financeCost:number; tax:number; netIncome:number; rows:number };
 const initialSummary: FactSummary = { revenue:0, cogs:0, operatingExpense:0, otherIncome:0, otherExpense:0, financeCost:0, tax:0, netIncome:0, rows:0 };
@@ -16,7 +16,7 @@ export default function ActualsPage() {
   useEffect(() => {
     let active = true;
     const load = async () => {
-      const supabase = createClient();
+      const supabase = getSupabaseBrowserClient();
       const { data: auth } = await supabase.auth.getUser();
       if (!auth.user) { if(active){setError("يجب تسجيل الدخول لعرض البيانات الفعلية");setLoading(false);} return; }
       const { data: membership } = await supabase.from("organization_members").select("organization_id").eq("user_id",auth.user.id).limit(1).maybeSingle();
