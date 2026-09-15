@@ -5,115 +5,55 @@ import Link from "next/link";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 
 type Account = { id: string; code: string; name: string };
-type OpeningRow = { id: string; account_id: string; account_code: string; account_name: string; opening_date: string; debit_minor: number; credit_minor: number; description: string | null; status: string };
+type Line = { account_id: string; debit: string; credit: string; description: string };
+type OpeningRow = { id: string; entry_id: string | null; account_code: string; account_name: string; debit_minor: number; credit_minor: number; description: string | null; status: string };
 
-const toMinor = (value: string) => { const n = Number(String(value).replace(/,/g, "").trim() || 0); return Number.isFinite(n) ? Math.round(n * 100) : NaN; };
-const fromMinor = (value: number) => (Number(value || 0) / 100).toLocaleString("ar-SA", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const toMinor = (v: string) => { const n = Number(String(v).replace(/,/g, "").trim() || 0); return Number.isFinite(n) ? Math.round(n * 100) : NaN; };
+const fromMinor = (v: number) => (Number(v || 0) / 100).toLocaleString("ar-SA", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const statusLabel = (s: string) => s === "approved" ? "معتمد" : s === "locked" ? "مقفل" : "مسودة";
+const emptyLine = (): Line => ({ account_id: "", debit: "", credit: "", description: "" });
 
 export default function OpeningBalancesPage() {
   const supabase = getSupabaseBrowserClient();
-  const [organizationId, setOrganizationId] = useState("");
-  const [date, setDate] = useState("");
-  const [accounts, setAccounts] = useState<Account[]>([]);
-  const [rows, setRows] = useState<OpeningRow[]>([]);
-  const [selectedAccount, setSelectedAccount] = useState("");
-  const [debit, setDebit] = useState("");
-  const [credit, setCredit] = useState("");
-  const [description, setDescription] = useState("");
-  const [loading, setLoading] = useState(true);
-  const [working, setWorking] = useState(false);
-  const [message, setMessage] = useState("");
-  const [error, setError] = useState("");
+  const [org, setOrg] = useState(""); const [date, setDate] = useState(""); const [accounts, setAccounts] = useState<Account[]>([]); const [rows, setRows] = useState<OpeningRow[]>([]);
+  const [lines, setLines] = useState<Line[]>([emptyLine(), emptyLine()]); const [description, setDescription] = useState(""); const [loading, setLoading] = useState(true); const [working, setWorking] = useState(false); const [error, setError] = useState(""); const [message, setMessage] = useState("");
 
-  const load = async (org: string, openingDate: string) => {
+  const load = async (organizationId: string, openingDate: string) => {
     setLoading(true); setError("");
-    const [{ data: accountData, error: accountError }, { data: openingData, error: openingError }] = await Promise.all([
-      supabase.from("accounts").select("id,code,name").eq("organization_id", org).order("code"),
-      openingDate ? supabase.rpc("get_opening_balances", { p_organization_id: org, p_opening_date: openingDate }) : Promise.resolve({ data: [], error: null } as any),
-    ]);
-    if (accountError) setError(accountError.message); else setAccounts((accountData ?? []) as Account[]);
-    if (openingError) setError(openingError.message); else setRows((openingData ?? []) as OpeningRow[]);
-    setLoading(false);
+    const [a, r] = await Promise.all([supabase.rpc("get_chart_of_accounts", { p_organization_id: organizationId }), openingDate ? supabase.rpc("get_opening_balances", { p_organization_id: organizationId, p_opening_date: openingDate }) : Promise.resolve({ data: [], error: null } as any)]);
+    if (a.error) setError(a.error.message); else setAccounts((a.data ?? []) as Account[]);
+    if (r.error) setError(r.error.message); else setRows((r.data ?? []) as OpeningRow[]); setLoading(false);
   };
 
-  useEffect(() => {
-    const org = window.sessionStorage.getItem("activeOrganizationId") ?? "";
-    const year = new Date().getFullYear();
-    const initialDate = `${year}-01-01`;
-    setOrganizationId(org); setDate(initialDate);
-    if (org) void load(org, initialDate);
-  }, []);
+  useEffect(() => { const organizationId = window.sessionStorage.getItem("activeOrganizationId") ?? ""; const initialDate = `${new Date().getFullYear()}-01-01`; setOrg(organizationId); setDate(initialDate); if (organizationId) void load(organizationId, initialDate); }, []);
 
-  const totals = useMemo(() => rows.reduce((x, r) => ({ debit: x.debit + Number(r.debit_minor || 0), credit: x.credit + Number(r.credit_minor || 0) }), { debit: 0, credit: 0 }), [rows]);
-  const difference = totals.debit - totals.credit;
-  const draftCount = rows.filter(r => r.status === "draft").length;
-  const approvedCount = rows.filter(r => r.status === "approved").length;
-  const lockedCount = rows.filter(r => r.status === "locked").length;
+  const totals = useMemo(() => lines.reduce((x, l) => ({ debit: x.debit + (Number.isFinite(toMinor(l.debit)) ? toMinor(l.debit) : 0), credit: x.credit + (Number.isFinite(toMinor(l.credit)) ? toMinor(l.credit) : 0) }), { debit: 0, credit: 0 }), [lines]);
+  const difference = totals.debit - totals.credit; const draftCount = rows.filter(r => r.status === "draft").length; const approvedCount = rows.filter(r => r.status === "approved").length; const lockedCount = rows.filter(r => r.status === "locked").length;
+  const updateLine = (i: number, patch: Partial<Line>) => setLines(prev => prev.map((l, n) => n === i ? { ...l, ...patch } : l));
+  const addLine = () => setLines(prev => [...prev, emptyLine()]); const removeLine = (i: number) => setLines(prev => prev.length > 2 ? prev.filter((_, n) => n !== i) : prev);
 
-  const save = async () => {
-    setError(""); setMessage("");
-    if (!organizationId || !date || !selectedAccount) return setError("اختر تاريخ الرصيد والحساب أولًا");
-    const d = toMinor(debit), c = toMinor(credit);
-    if (!Number.isFinite(d) || !Number.isFinite(c) || d < 0 || c < 0 || (d > 0 && c > 0) || (d === 0 && c === 0)) return setError("أدخل قيمة مدينة أو دائنة واحدة فقط وبقيمة صحيحة");
-    setWorking(true);
-    const { error: saveError } = await supabase.rpc("upsert_opening_balance", { p_organization_id: organizationId, p_account_id: selectedAccount, p_opening_date: date, p_debit_minor: d, p_credit_minor: c, p_currency: "SAR", p_description: description || null, p_status: "draft" });
-    setWorking(false);
-    if (saveError) return setError(saveError.message);
-    setMessage("تم حفظ الرصيد كمسودة"); setDebit(""); setCredit(""); setDescription("");
-    await load(organizationId, date);
+  const saveEntry = async () => {
+    setError(""); setMessage(""); if (!org || !date) return setError("حدد تاريخ القيد الافتتاحي"); if (lines.length < 2) return setError("القيد الافتتاحي يجب أن يحتوي على حساب مدين وحساب دائن على الأقل");
+    const payload = lines.map(l => ({ account_id: l.account_id, debit_minor: toMinor(l.debit), credit_minor: toMinor(l.credit), description: l.description || description || null }));
+    if (payload.some(l => !l.account_id || !Number.isFinite(l.debit_minor) || !Number.isFinite(l.credit_minor) || l.debit_minor < 0 || l.credit_minor < 0 || (l.debit_minor > 0 && l.credit_minor > 0) || (l.debit_minor === 0 && l.credit_minor === 0))) return setError("كل سطر يجب أن يحتوي على حساب وقيمة في طرف واحد فقط");
+    if (new Set(payload.map(l => l.account_id)).size !== payload.length) return setError("لا يمكن تكرار نفس الحساب داخل القيد الافتتاحي"); if (totals.debit !== totals.credit) return setError("القيد الافتتاحي غير متوازن: يجب أن يتساوى إجمالي المدين مع إجمالي الدائن");
+    setWorking(true); const { data, error: e } = await supabase.rpc("create_opening_entry", { p_organization_id: org, p_opening_date: date, p_lines: payload, p_description: description || null }); setWorking(false);
+    if (e) return setError(e.message); setMessage(`تم حفظ القيد الافتتاحي كمسودة — ${data?.line_count ?? payload.length} سطر — مدين ${fromMinor(totals.debit)} ودائن ${fromMinor(totals.credit)}`); setLines([emptyLine(), emptyLine()]); setDescription(""); await load(org, date);
   };
-
-  const approve = async () => {
-    setWorking(true); setError(""); setMessage("");
-    const { data, error: e } = await supabase.rpc("approve_opening_balances", { p_organization_id: organizationId, p_opening_date: date });
-    setWorking(false);
-    if (e) return setError(e.message);
-    setMessage(`تم اعتماد ${data?.approved_lines ?? 0} رصيدًا افتتاحيًا بعد التحقق من التوازن`); await load(organizationId, date);
-  };
-
-  const lock = async () => {
-    setWorking(true); setError(""); setMessage("");
-    const { data, error: e } = await supabase.rpc("lock_opening_balances", { p_organization_id: organizationId, p_opening_date: date });
-    setWorking(false);
-    if (e) return setError(e.message);
-    setMessage(`تم قفل ${data?.locked_lines ?? 0} رصيدًا افتتاحيًا`); await load(organizationId, date);
-  };
-
-  const remove = async (id: string) => {
-    if (!window.confirm("حذف هذا الرصيد الافتتاحي؟")) return;
-    setWorking(true); setError(""); setMessage("");
-    const { error: e } = await supabase.rpc("delete_opening_balance", { p_organization_id: organizationId, p_id: id });
-    setWorking(false);
-    if (e) return setError(e.message);
-    setMessage("تم حذف المسودة"); await load(organizationId, date);
-  };
-
-  const validate = async () => {
-    setError(""); setMessage("");
-    const { data, error: e } = await supabase.rpc("validate_opening_balances", { p_organization_id: organizationId, p_opening_date: date });
-    if (e) return setError(e.message);
-    setMessage(data?.balanced ? `الأرصدة المعتمدة متوازنة — ${data.line_count} حساب` : `الأرصدة المعتمدة غير متوازنة — الفرق ${fromMinor(data?.difference_minor ?? 0)} ريال`);
-  };
+  const approve = async () => { setWorking(true); setError(""); setMessage(""); const { data, error: e } = await supabase.rpc("approve_opening_balances", { p_organization_id: org, p_opening_date: date }); setWorking(false); if (e) return setError(e.message); setMessage(`تم اعتماد ${data?.approved_lines ?? 0} سطرًا بعد التحقق من التوازن`); await load(org, date); };
+  const lock = async () => { setWorking(true); setError(""); setMessage(""); const { data, error: e } = await supabase.rpc("lock_opening_balances", { p_organization_id: org, p_opening_date: date }); setWorking(false); if (e) return setError(e.message); setMessage(`تم قفل ${data?.locked_lines ?? 0} سطرًا`); await load(org, date); };
+  const remove = async (id: string) => { if (!window.confirm("حذف سطر المسودة؟")) return; setWorking(true); const { error: e } = await supabase.rpc("delete_opening_balance", { p_organization_id: org, p_id: id }); setWorking(false); if (e) setError(e.message); else { setMessage("تم حذف المسودة"); await load(org, date); } };
 
   return <main dir="rtl" className="min-h-screen bg-[#f7f8fa] text-slate-900">
-    <header className="border-b border-slate-200 bg-white"><div className="mx-auto max-w-[1500px] px-4 py-5 sm:px-6 lg:px-8"><Link href="/workspace/data" className="text-xs text-slate-500 underline underline-offset-4">مركز البيانات المالية</Link><h1 className="mt-2 text-2xl font-bold text-slate-950">الأرصدة الافتتاحية</h1><p className="mt-2 max-w-3xl text-sm leading-7 text-slate-500">الأرصدة الموجودة قبل بدء حركة القيود اليومية. تُحفظ منفصلة عن القيود، ولا تؤثر على الإيرادات أو المصروفات.</p></div></header>
+    <header className="border-b border-slate-200 bg-white"><div className="mx-auto max-w-[1500px] px-4 py-5 sm:px-6 lg:px-8"><Link href="/workspace/data" className="text-xs text-slate-500 underline underline-offset-4">مركز البيانات المالية</Link><h1 className="mt-2 text-2xl font-bold text-slate-950">قيد الأرصدة الافتتاحية</h1><p className="mt-2 max-w-3xl text-sm leading-7 text-slate-500">القيد الافتتاحي يتكون من طرف مدين وطرف دائن على الأقل، ويمكن توزيع القيمة على عدة حسابات، ولا يُحفظ إلا إذا تساوى إجمالي المدين مع إجمالي الدائن.</p></div></header>
     <section className="mx-auto max-w-[1500px] px-4 py-6 sm:px-6 lg:px-8">
       <div className="mb-5 grid gap-3 sm:grid-cols-3"><div className="border border-slate-200 bg-white p-4"><p className="text-xs text-slate-500">مسودات</p><p className="mt-1 text-xl font-bold">{draftCount}</p></div><div className="border border-slate-200 bg-white p-4"><p className="text-xs text-slate-500">معتمدة</p><p className="mt-1 text-xl font-bold">{approvedCount}</p></div><div className="border border-slate-200 bg-white p-4"><p className="text-xs text-slate-500">مقفلة</p><p className="mt-1 text-xl font-bold">{lockedCount}</p></div></div>
-      <div className="grid gap-5 lg:grid-cols-[360px_minmax(0,1fr)]">
-        <section className="border border-slate-200 bg-white p-5"><h2 className="text-sm font-bold">إضافة رصيد افتتاحي</h2><p className="mt-1 text-xs leading-6 text-slate-500">الحفظ يبدأ كمسودة. الاعتماد والقفل يتمان على مستوى تاريخ الافتتاح بعد التحقق من توازن الإجمالي.</p>
-          <label className="mt-5 block text-xs font-semibold text-slate-600">تاريخ الافتتاح<input type="date" value={date} onChange={e => { setDate(e.target.value); if (organizationId) void load(organizationId, e.target.value); }} className="mt-2 w-full border border-slate-300 bg-white px-3 py-2.5 text-sm" /></label>
-          <label className="mt-4 block text-xs font-semibold text-slate-600">الحساب<select value={selectedAccount} onChange={e => setSelectedAccount(e.target.value)} className="mt-2 w-full border border-slate-300 bg-white px-3 py-2.5 text-sm"><option value="">اختر الحساب</option>{accounts.map(a => <option key={a.id} value={a.id}>{a.code} — {a.name}</option>)}</select></label>
-          <div className="mt-4 grid grid-cols-2 gap-3"><label className="text-xs font-semibold text-slate-600">مدين<input inputMode="decimal" value={debit} onChange={e => setDebit(e.target.value)} className="mt-2 w-full border border-slate-300 px-3 py-2.5 text-sm" placeholder="0.00" /></label><label className="text-xs font-semibold text-slate-600">دائن<input inputMode="decimal" value={credit} onChange={e => setCredit(e.target.value)} className="mt-2 w-full border border-slate-300 px-3 py-2.5 text-sm" placeholder="0.00" /></label></div>
-          <label className="mt-4 block text-xs font-semibold text-slate-600">البيان<input value={description} onChange={e => setDescription(e.target.value)} className="mt-2 w-full border border-slate-300 px-3 py-2.5 text-sm" placeholder="رصيد افتتاحي قبل بدء القيود" /></label>
-          <button disabled={working} onClick={save} className="mt-5 w-full bg-slate-950 px-4 py-3 text-sm font-bold text-white disabled:opacity-50">{working ? "جارٍ التنفيذ..." : "حفظ كمسودة"}</button>
-          <div className="mt-3 grid grid-cols-2 gap-2"><button disabled={working || draftCount === 0} onClick={approve} className="border border-slate-300 px-3 py-2.5 text-xs font-bold disabled:opacity-40">اعتماد المسودات</button><button disabled={working || rows.length === 0 || draftCount > 0 || difference !== 0} onClick={lock} className="border border-slate-300 px-3 py-2.5 text-xs font-bold disabled:opacity-40">قفل الأرصدة</button></div>
-          {error && <p className="mt-4 border border-red-200 bg-red-50 p-3 text-xs leading-6 text-red-700">{error}</p>}{message && <p className="mt-4 border border-emerald-200 bg-emerald-50 p-3 text-xs leading-6 text-emerald-700">{message}</p>}
-        </section>
-        <section className="border border-slate-200 bg-white"><div className="flex flex-col gap-3 border-b border-slate-200 p-5 sm:flex-row sm:items-center sm:justify-between"><div><h2 className="text-sm font-bold">الأرصدة المحفوظة</h2><p className="mt-1 text-xs text-slate-500">{date || "—"} · {rows.length} حساب · الفرق الكلي {fromMinor(difference)} ريال</p></div><button onClick={validate} disabled={working || rows.length === 0} className="border border-slate-300 px-4 py-2 text-xs font-bold text-slate-700 disabled:opacity-40">التحقق من التوازن</button></div>
-          <div className="overflow-x-auto"><table className="w-full text-right text-xs"><thead className="border-b border-slate-200 bg-slate-50 text-slate-500"><tr><th className="px-4 py-3">الحساب</th><th className="px-4 py-3">مدين</th><th className="px-4 py-3">دائن</th><th className="px-4 py-3">الحالة</th><th className="px-4 py-3">البيان</th><th className="px-4 py-3">إجراء</th></tr></thead><tbody>{loading ? <tr><td colSpan={6} className="px-4 py-8 text-center text-slate-400">جارٍ التحميل...</td></tr> : rows.length ? rows.map(r => <tr key={r.id} className="border-b border-slate-100"><td className="px-4 py-3 font-semibold">{r.account_code} — {r.account_name}</td><td className="px-4 py-3">{fromMinor(r.debit_minor)}</td><td className="px-4 py-3">{fromMinor(r.credit_minor)}</td><td className="px-4 py-3">{statusLabel(r.status)}</td><td className="px-4 py-3 text-slate-500">{r.description || "—"}</td><td className="px-4 py-3">{r.status === "draft" ? <button disabled={working} onClick={() => remove(r.id)} className="font-bold text-red-700 disabled:opacity-40">حذف</button> : <span className="text-slate-400">—</span>}</td></tr>) : <tr><td colSpan={6} className="px-4 py-12 text-center text-slate-400">لا توجد أرصدة افتتاحية لهذا التاريخ بعد</td></tr>}</tbody><tfoot className="border-t border-slate-200 bg-slate-50 font-bold"><tr><td className="px-4 py-3">الإجمالي</td><td className="px-4 py-3">{fromMinor(totals.debit)}</td><td className="px-4 py-3">{fromMinor(totals.credit)}</td><td colSpan={3} className={difference === 0 ? "px-4 py-3 text-emerald-700" : "px-4 py-3 text-red-700"}>الفرق: {fromMinor(difference)} ريال</td></tr></tfoot></table></div>
-        </section>
-      </div>
+      <section className="border border-slate-200 bg-white p-5"><div className="grid gap-4 md:grid-cols-[220px_minmax(0,1fr)_240px]"><label className="text-xs font-semibold text-slate-600">تاريخ القيد<input type="date" value={date} onChange={e=>{setDate(e.target.value);if(org)void load(org,e.target.value)}} className="mt-2 w-full border border-slate-300 px-3 py-2.5 text-sm"/></label><label className="text-xs font-semibold text-slate-600">البيان العام<input value={description} onChange={e=>setDescription(e.target.value)} className="mt-2 w-full border border-slate-300 px-3 py-2.5 text-sm" placeholder="رصيد افتتاحي قبل بدء حركة القيود اليومية"/></label><div className={`border p-3 text-center ${difference===0&&totals.debit>0?"border-emerald-200 bg-emerald-50":"border-slate-200 bg-slate-50"}`}><p className="text-xs text-slate-500">فرق القيد</p><p className="mt-1 text-lg font-bold">{fromMinor(difference)} ريال</p><p className="mt-1 text-[11px]">{difference===0&&totals.debit>0?"متوازن":"يجب تساوي المدين والدائن"}</p></div></div>
+        <div className="mt-6 overflow-x-auto"><table className="w-full min-w-[760px] text-right text-sm"><thead className="border-y border-slate-200 bg-slate-50 text-xs text-slate-500"><tr><th className="px-3 py-3">الحساب</th><th className="w-44 px-3 py-3">مدين</th><th className="w-44 px-3 py-3">دائن</th><th className="px-3 py-3">البيان</th><th className="w-14 px-3 py-3"></th></tr></thead><tbody>{lines.map((l,i)=><tr key={i} className="border-b border-slate-100"><td className="px-3 py-2"><select value={l.account_id} onChange={e=>updateLine(i,{account_id:e.target.value})} className="w-full border border-slate-300 bg-white px-3 py-2.5 text-sm"><option value="">اختر من دليل الحسابات</option>{accounts.map(a=><option key={a.id} value={a.id}>{a.code} — {a.name}</option>)}</select></td><td className="px-3 py-2"><input inputMode="decimal" value={l.debit} onChange={e=>updateLine(i,{debit:e.target.value,credit:""})} className="w-full border border-slate-300 px-3 py-2.5" placeholder="0.00"/></td><td className="px-3 py-2"><input inputMode="decimal" value={l.credit} onChange={e=>updateLine(i,{credit:e.target.value,debit:""})} className="w-full border border-slate-300 px-3 py-2.5" placeholder="0.00"/></td><td className="px-3 py-2"><input value={l.description} onChange={e=>updateLine(i,{description:e.target.value})} className="w-full border border-slate-300 px-3 py-2.5"/></td><td className="px-3 py-2"><button type="button" onClick={()=>removeLine(i)} disabled={lines.length<=2} className="text-xs text-red-600 disabled:text-slate-300">حذف</button></td></tr>)}</tbody><tfoot className="bg-slate-50 font-bold"><tr><td className="px-3 py-3">الإجمالي</td><td className="px-3 py-3">{fromMinor(totals.debit)}</td><td className="px-3 py-3">{fromMinor(totals.credit)}</td><td colSpan={2} className={difference===0&&totals.debit>0?"px-3 py-3 text-emerald-700":"px-3 py-3 text-red-700"}>{difference===0&&totals.debit>0?"القيد متوازن":"القيد غير متوازن"}</td></tr></tfoot></table></div>
+        <div className="mt-4 flex flex-wrap gap-2"><button type="button" onClick={addLine} className="border border-slate-300 px-4 py-2.5 text-sm font-bold">+ إضافة سطر</button><button type="button" disabled={working} onClick={()=>void saveEntry()} className="bg-slate-950 px-5 py-2.5 text-sm font-bold text-white disabled:opacity-50">{working?"جارٍ الحفظ...":"حفظ القيد كمسودة"}</button><button type="button" disabled={working||draftCount===0} onClick={()=>void approve()} className="border border-slate-300 px-4 py-2.5 text-sm font-bold disabled:opacity-40">اعتماد المسودات</button><button type="button" disabled={working||rows.length===0||draftCount>0} onClick={()=>void lock()} className="border border-slate-300 px-4 py-2.5 text-sm font-bold disabled:opacity-40">قفل الأرصدة</button></div>
+        {error&&<p className="mt-4 border border-red-200 bg-red-50 p-3 text-xs leading-6 text-red-700">{error}</p>}{message&&<p className="mt-4 border border-emerald-200 bg-emerald-50 p-3 text-xs leading-6 text-emerald-700">{message}</p>}
+      </section>
+      <section className="mt-5 border border-slate-200 bg-white"><div className="border-b border-slate-200 p-5"><h2 className="text-sm font-bold">القيود المحفوظة</h2><p className="mt-1 text-xs text-slate-500">كل مجموعة تحمل نفس رقم القيد الداخلي تمثل قيدًا افتتاحيًا واحدًا متوازنًا.</p></div><div className="overflow-x-auto"><table className="w-full min-w-[700px] text-right text-xs"><thead className="bg-slate-50 text-slate-500"><tr><th className="px-4 py-3">الحساب</th><th className="px-4 py-3">مدين</th><th className="px-4 py-3">دائن</th><th className="px-4 py-3">الحالة</th><th className="px-4 py-3">البيان</th><th className="px-4 py-3">إجراء</th></tr></thead><tbody>{loading?<tr><td colSpan={6} className="px-4 py-10 text-center text-slate-400">جارٍ التحميل...</td></tr>:rows.length?rows.map(r=><tr key={r.id} className="border-t border-slate-100"><td className="px-4 py-3 font-semibold">{r.account_code} — {r.account_name}</td><td className="px-4 py-3">{fromMinor(r.debit_minor)}</td><td className="px-4 py-3">{fromMinor(r.credit_minor)}</td><td className="px-4 py-3">{statusLabel(r.status)}</td><td className="px-4 py-3 text-slate-500">{r.description||"—"}</td><td className="px-4 py-3">{r.status==="draft"?<button type="button" onClick={()=>void remove(r.id)} className="font-bold text-red-700">حذف</button>:"—"}</td></tr>):<tr><td colSpan={6} className="px-4 py-12 text-center text-slate-400">لا توجد قيود افتتاحية لهذا التاريخ</td></tr>}</tbody></table></div></section>
     </section>
   </main>;
 }
