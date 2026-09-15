@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 import { formatMoneyMinor, formatDate } from "@/lib/format";
 import { ReportDateFilter } from "@/components/workspace/report-date-filter";
@@ -24,9 +24,21 @@ export default function TrialBalancePage() {
   const [data, setData] = useState<TrialBalance | null>(null);
   const [query, setQuery] = useState("");
   const [openFilters, setOpenFilters] = useState(false);
+  const filterRef = useRef<HTMLDivElement>(null);
   const [loading, setLoading] = useState(true);
   const [running, setRunning] = useState(false);
   const [error, setError] = useState("");
+
+  useEffect(() => {
+    if (!openFilters) return;
+    const onPointerDown = (event: PointerEvent) => {
+      if (filterRef.current && !filterRef.current.contains(event.target as Node)) setOpenFilters(false);
+    };
+    const onKeyDown = (event: KeyboardEvent) => { if (event.key === "Escape") setOpenFilters(false); };
+    document.addEventListener("pointerdown", onPointerDown);
+    document.addEventListener("keydown", onKeyDown);
+    return () => { document.removeEventListener("pointerdown", onPointerDown); document.removeEventListener("keydown", onKeyDown); };
+  }, [openFilters]);
 
   useEffect(() => {
     const id = window.sessionStorage.getItem("activeOrganizationId") || window.localStorage.getItem("activeOrganizationId") || "";
@@ -84,7 +96,7 @@ export default function TrialBalancePage() {
     <header className="sticky top-0 z-30 border-b border-slate-200 bg-white/95 backdrop-blur"><div className="flex items-center justify-between px-4 py-4 sm:px-6 lg:px-8"><a href="/workspace" className="text-sm font-semibold text-slate-500">العودة لمساحة العمل</a><div><p className="text-[10px] font-bold tracking-[.14em] text-slate-400">FINANCIAL MODEL</p><h1 className="mt-1 font-bold text-slate-950">ميزان المراجعة</h1></div></div></header>
     <section className="px-4 py-6 sm:px-6 lg:px-8">
       <div className="border-b border-slate-200 pb-6"><p className="text-xs font-bold text-slate-400">Trial Balance</p><h2 className="mt-1 text-2xl font-bold text-slate-950 sm:text-3xl">ميزان المراجعة الفعلي</h2><p className="mt-2 text-sm leading-6 text-slate-500">عرض الافتتاحي وحركة الفترة والختامي مع نفس فلتر التاريخ والأبعاد المستخدم في القوائم المالية.</p></div>
-      <div className="mt-5 border border-slate-200 bg-white p-4 shadow-sm"><div className="flex flex-wrap items-center gap-2"><ReportDateFilter value={range} onChange={v => { setRange(v); setData(null); }} minDate={dataRange.min} maxDate={dataRange.max} /><button type="button" onClick={() => setOpenFilters(v => !v)} className={`min-h-9 border px-3 text-xs font-bold ${activeFilterCount ? "border-slate-950 bg-slate-950 text-white" : "border-slate-300 bg-white"}`}>الأبعاد{activeFilterCount ? ` · ${activeFilterCount}` : ""}⌄</button><button type="button" disabled={!range.start || !range.end || running} onClick={() => void load()} className="min-h-9 bg-slate-950 px-4 text-xs font-bold text-white disabled:opacity-50">{running ? "جاري..." : "تطبيق"}</button></div>
+      <div className="mt-5 border border-slate-200 bg-white p-4 shadow-sm"><div className="flex flex-wrap items-center gap-2"><ReportDateFilter value={range} onChange={v => { setRange(v); setData(null); }} minDate={dataRange.min} maxDate={dataRange.max} /><div ref={filterRef} className="relative"><button type="button" onClick={() => setOpenFilters(v => !v)} className={`min-h-9 border px-3 text-xs font-bold ${activeFilterCount ? "border-slate-950 bg-slate-950 text-white" : "border-slate-300 bg-white"}`}>الأبعاد{activeFilterCount ? ` · ${activeFilterCount}` : ""}⌄</button></div><button type="button" disabled={!range.start || !range.end || running} onClick={() => void load()} className="min-h-9 bg-slate-950 px-4 text-xs font-bold text-white disabled:opacity-50">{running ? "جاري..." : "تطبيق"}</button></div>
         {activeFilterCount > 0 && <div className="mt-3 flex flex-wrap gap-2">{Object.entries(filters).filter(([, v]) => v).map(([k]) => <button key={k} type="button" onClick={() => setFilter(k as keyof FilterState, "")} className="bg-slate-100 px-3 py-1.5 text-xs font-semibold">{({ branch: "الفرع", department: "القسم", costCenter: "مركز التكلفة", region: "المنطقة", product: "المنتج", project: "المشروع", account: "الحساب" } as Record<string, string>)[k]} ×</button>)}<button type="button" onClick={clear} className="text-xs font-bold text-red-600">مسح الكل</button></div>}
         {openFilters && <div className="mt-4 border-t border-slate-100 pt-4"><div className="mb-3 flex items-center justify-between"><span className="text-xs font-bold">أبعاد التقرير</span><button type="button" onClick={clear} className="text-[11px] font-bold text-slate-500">مسح الكل</button></div><div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">{([["branch","الفرع",options.branches],["department","القسم",options.departments],["costCenter","مركز التكلفة",options.cost_centers],["region","المنطقة",options.regions],["product","المنتج",options.products],["project","المشروع",options.projects]] as [keyof FilterState,string,Option[]][]).map(([key,label,items]) => <label key={key} className="text-[11px] font-bold text-slate-500">{label}<select value={filters[key]} onChange={e => setFilter(key,e.target.value)} className="mt-1 min-h-9 w-full border border-slate-300 bg-white px-2 text-xs"><option value="">الكل</option>{items.map(x => <option key={x.id} value={x.id}>{x.code ? `${x.code} — ` : ""}{x.name}</option>)}</select></label>)}<div className="relative"><label className="text-[11px] font-bold text-slate-500">الحساب<input value={query} onChange={e => { setQuery(e.target.value); if (!e.target.value) setFilter("account", ""); }} placeholder="ابحث بالكود أو الاسم" className="mt-1 min-h-9 w-full border border-slate-300 bg-white px-2 text-xs" /></label>{query && <div className="absolute right-0 top-14 z-20 max-h-48 w-full overflow-auto border border-slate-200 bg-white shadow-lg">{filteredAccounts.slice(0, 30).map(a => <button type="button" key={a.id} onClick={() => { setFilter("account", a.id); setQuery(`${a.code || ""} — ${a.name}`); }} className="block w-full px-3 py-2 text-right text-xs hover:bg-slate-50">{a.code} — {a.name}</button>)}</div>}</div></div><p className="mt-3 text-[10px] leading-5 text-slate-400">الأبعاد تطبق على البيانات الفعلية المنشورة والتقرير بالكامل.</p></div>}
       </div>
