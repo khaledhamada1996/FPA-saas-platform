@@ -8,7 +8,6 @@ type AccessRow={permission_key?:string;granted?:boolean}; type NavItem=readonly[
 const navigation:NavSection[]=[
  ["البيانات والنموذج المالي",[
   ["screen.data.view","مركز البيانات المالية","/workspace/data"],
-  ["screen.data_monitoring.view","مراقبة مصادر البيانات","/workspace/data-monitoring"],
   ["screen.actuals.view","النموذج المالي الفعلي","/workspace/actuals"],
   ["screen.trial_balance.view","ميزان المراجعة","/workspace/trial-balance"]
  ]],
