@@ -21,21 +21,13 @@ export default function ActualsPage() {
       if (!auth.user) { if(active){setError("يجب تسجيل الدخول لعرض البيانات الفعلية");setLoading(false);} return; }
       const { data: membership } = await supabase.from("organization_members").select("organization_id").eq("user_id",auth.user.id).limit(1).maybeSingle();
       if (!membership?.organization_id) { if(active){setError("لا توجد منشأة مرتبطة بالمستخدم الحالي");setLoading(false);} return; }
-      const { data, error: queryError } = await supabase.from("financial_facts").select("debit_minor, credit_minor, accounts!inner(statement_subclassification)").eq("organization_id",membership.organization_id).eq("fact_type","actual").eq("status","published");
-      if(queryError){if(active){setError("تعذر قراءة البيانات الفعلية المنشورة");setLoading(false);}return;}
-      const next={...initialSummary,rows:data?.length??0};
-      for(const row of data??[]){
-        const classification=(row.accounts as {statement_subclassification?:string|null}|null)?.statement_subclassification;
-        const net=(Number(row.debit_minor)||0)-(Number(row.credit_minor)||0);
-        if(classification==="revenue") next.revenue += -net;
-        else if(classification==="cogs") next.cogs += net;
-        else if(classification==="operating_expense") next.operatingExpense += net;
-        else if(classification==="other_income") next.otherIncome += -net;
-        else if(classification==="other_expense") next.otherExpense += net;
-        else if(classification==="finance_cost") next.financeCost += net;
-        else if(classification==="tax") next.tax += net;
-      }
-      next.netIncome=next.revenue-next.cogs-next.operatingExpense+next.otherIncome-next.otherExpense-next.financeCost-next.tax;
+      const { data, error: queryError } = await supabase.rpc("get_actuals_summary", { p_organization_id: membership.organization_id });
+      if(queryError || !data){if(active){setError(queryError?.message || "تعذر قراءة البيانات الفعلية المنشورة");setLoading(false);}return;}
+      const next: FactSummary = {
+        revenue:Number(data.revenue)||0, cogs:Number(data.cogs)||0, operatingExpense:Number(data.operating_expense)||0,
+        otherIncome:Number(data.other_income)||0, otherExpense:Number(data.other_expense)||0, financeCost:Number(data.finance_cost)||0,
+        tax:Number(data.tax)||0, netIncome:Number(data.net_income)||0, rows:Number(data.rows)||0,
+      };
       if(active){setSummary(next);setLoading(false);}
     };
     void load(); return()=>{active=false;};
