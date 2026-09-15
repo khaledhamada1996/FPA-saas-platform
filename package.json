@@ -5,7 +5,10 @@
   "scripts": {
     "dev": "next dev",
     "typecheck": "tsc --noEmit",
-    "build": "next build",
+    "build": "opennextjs-cloudflare build",
+    "build:next": "next build",
+    "preview": "opennextjs-cloudflare preview",
+    "deploy": "opennextjs-cloudflare build && opennextjs-cloudflare deploy",
     "start": "next start",
     "test:e2e": "playwright test"
   },
@@ -17,6 +20,7 @@
     "xlsx": "0.18.5"
   },
   "devDependencies": {
+    "@opennextjs/cloudflare": "1.20.6",
     "@playwright/test": "1.55.0",
     "@types/node": "22.15.30",
     "@types/react": "19.1.2",
@@ -24,6 +28,7 @@
     "autoprefixer": "10.4.21",
     "postcss": "8.5.3",
     "tailwindcss": "3.4.17",
-    "typescript": "5.8.3"
+    "typescript": "5.8.3",
+    "wrangler": "4.130.0"
   }
 }
