@@ -219,9 +219,14 @@ export default function ImportPage() {
 
       <section className="mx-auto max-w-[1500px] px-4 py-6 sm:px-6 lg:px-8">
         <div className="border-b border-slate-200 pb-6">
-          <p className="text-xs font-bold text-slate-400">Actual Journal Transactions</p>
-          <h2 className="mt-1 text-2xl font-bold text-slate-950">استيراد القيود اليومية</h2>
-          <p className="mt-2 max-w-3xl text-sm leading-7 text-slate-500">ارفع ملف CSV أو XLSX. سنكتشف الأعمدة، نتحقق من البيانات وتوازن كل قيد، ثم ننقلك إلى المطابقة والمراجعة قبل نشر Actuals.</p>
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <p className="text-xs font-bold text-slate-400">Actual Journal Transactions</p>
+              <h2 className="mt-1 text-2xl font-bold text-slate-950">استيراد القيود اليومية</h2>
+              <p className="mt-2 max-w-3xl text-sm leading-7 text-slate-500">ارفع ملف CSV أو XLSX. سنكتشف الأعمدة، نتحقق من البيانات وتوازن كل قيد، ثم ننقلك إلى المطابقة والمراجعة قبل نشر Actuals.</p>
+            </div>
+            <button type="button" onClick={() => router.push("/workspace/data/manual")} className="shrink-0 bg-slate-950 px-4 py-2.5 text-xs font-bold text-white hover:bg-slate-800">+ إضافة قيد يومية يدوي</button>
+          </div>
         </div>
 
         <div className="mt-6 grid gap-5 lg:grid-cols-[minmax(0,1fr)_320px]">
