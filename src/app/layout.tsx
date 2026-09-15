@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import { LatinDigits } from "@/components/latin-digits";
 
 export const metadata: Metadata = {
   title: "FP&A Platform",
@@ -9,7 +10,10 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="ar" dir="rtl">
-      <body>{children}</body>
+      <body>
+        <LatinDigits />
+        {children}
+      </body>
     </html>
   );
 }
