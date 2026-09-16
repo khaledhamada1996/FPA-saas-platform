@@ -63,3 +63,5 @@ Documentation, domain rules, acceptance criteria, and architecture are approved 
 ## Build Trigger
 
 Repository changes should remain minimal and deterministic so deployment providers can rebuild the application from the `main` branch without requiring manual repository changes.
+
+<!-- hierarchy-updater-trigger -->
