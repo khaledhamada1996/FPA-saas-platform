@@ -2,15 +2,15 @@
 
 ## 1. Purpose
 
-Provide a governed trial balance derived from authoritative financial facts after the Import & Mapping publish gate.
+Provide a governed trial balance derived from the approved opening-balance baseline and authoritative financial facts after the Import & Mapping publish gate.
 
 ## 2. Source of Truth
 
-The engine reads `financial_facts` where:
+The engine reads:
 
-- `organization_id` matches the requested tenant.
-- `fact_type = actual`.
-- The user has access to the relevant organizational dimensions.
+- `opening_balances` for approved opening entries at or before the selected period start.
+- `financial_facts` where `organization_id` matches the requested tenant, `fact_type = actual`, and `status = published`.
+- The user must have access to the relevant organizational dimensions.
 
 Rolled-back imports are excluded because their authoritative facts are removed by the controlled rollback operation.
 
@@ -27,18 +27,28 @@ For every account with opening balance or activity in the selected period, retur
 - period credit
 - closing debit/credit balance
 
-Opening balance is the net actual balance from periods before the selected period. Closing balance is opening balance + period debit - period credit.
+For balance-sheet accounts, opening balance is the net approved opening baseline plus the net published actual balance from dates before the selected period. For income-statement accounts, the trial-balance opening balance remains zero for the period-based engine; date-range reporting applies fiscal-year opening/YTD rules separately.
+
+Opening debit and credit are mutually exclusive: a net positive opening balance is reported as debit, and a net negative opening balance is reported as credit. The engine must never expose both sides of the same account as its opening balance merely because historical debits and credits were aggregated separately.
+
+Closing balance is opening balance + period debit - period credit.
 
 Debit/credit values are represented in minor currency units in the database and formatted by the client.
 
-## 5. Integrity
+## 5. Filters
+
+All reporting dimension filters are applied consistently to both financial facts and opening balances. A dimension-specific opening balance is included only when it matches the selected dimension filter. An opening balance with a null dimension is treated as unassigned and is not attributed to a specific dimension when that dimension is filtered.
+
+## 6. Integrity
 
 For a balanced journal import, period total debit must equal period total credit. The API returns the period difference explicitly so the UI can surface an imbalance rather than hiding it.
 
-## 6. Security
+The opening balance is normalized to one side per account, and the closing balance is calculated from that normalized net balance. Explicit opening entries are not double-counted as journal activity.
 
-`public.get_trial_balance(uuid, uuid)` is a `SECURITY DEFINER` function with an empty `search_path`. It is executable only by `authenticated` and requires the organization `view` permission. Because the function bypasses table RLS as a definer function, it explicitly enforces tenant ownership and the configured organizational data-scope predicates before aggregating facts.
+## 7. Security
 
-## 7. MVP Boundary
+`public.get_trial_balance(uuid, uuid, ...)` is a `SECURITY DEFINER` function with an empty `search_path`. It is executable only by `authenticated` and requires the organization `view` permission. Because the function bypasses table RLS as a definer function, it explicitly enforces tenant ownership and the configured organizational data-scope predicates before aggregating facts and opening balances.
+
+## 8. MVP Boundary
 
 The MVP engine reports actuals. Budget, forecast, adjustments, consolidation, advanced dimensions, and comparative analytics are separate downstream capabilities and must not be silently mixed into the actual trial balance.
