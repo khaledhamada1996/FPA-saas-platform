@@ -1,0 +1,44 @@
+name: Compact financial statement lists
+on:
+  push:
+    branches: [main]
+permissions:
+  contents: write
+jobs:
+  compact:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Compact statement rows
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('src/app/workspace/financial-statements/page.tsx')
+          s = p.read_text()
+          replacements = {
+              'grid-cols-[1fr_180px_180px] items-center border-b border-slate-100 py-2.5 text-sm': 'grid-cols-[minmax(0,1fr)_140px_140px] items-center border-b border-slate-100 py-1.5 text-xs',
+              'paddingRight: `${level * 22}px`': 'paddingRight: `${level * 16}px`',
+              'className="inline-flex h-5 w-5 shrink-0 items-center justify-center text-xs leading-none': 'className="inline-flex h-4 w-4 shrink-0 items-center justify-center text-[11px] leading-none',
+              'border border-slate-200 bg-white p-4': 'border border-slate-200 bg-white p-3',
+              'mb-3 text-sm font-bold text-slate-950': 'mb-2 text-xs font-bold text-slate-950',
+              'grid-cols-[1fr_180px_180px] border-b-2 border-slate-900 pb-2 text-[11px]': 'grid-cols-[minmax(0,1fr)_140px_140px] border-b-2 border-slate-900 pb-1.5 text-[10px]',
+          }
+          for old, new in replacements.items():
+              if old not in s:
+                  print(f'Pattern already compacted or absent: {old}')
+              s = s.replace(old, new)
+          p.write_text(s)
+          PY
+      - name: Remove obsolete one-time updater
+        run: rm -f .github/workflows/one-time-balance-sheet-tree.yml
+      - name: Commit changes
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/app/workspace/financial-statements/page.tsx .github/workflows/one-time-balance-sheet-tree.yml
+          if git diff --cached --quiet; then
+            echo "No changes needed"
+            exit 0
+          fi
+          git commit -m "style: compact financial statement lists"
+          git push
