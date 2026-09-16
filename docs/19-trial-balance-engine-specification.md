@@ -27,7 +27,9 @@ For every account with opening balance or activity in the selected period, retur
 - period credit
 - closing debit/credit balance
 
-For balance-sheet accounts, opening balance is the net approved opening baseline plus the net published actual balance from dates before the selected period. For income-statement accounts, the trial-balance opening balance remains zero for the period-based engine; date-range reporting applies fiscal-year opening/YTD rules separately.
+For balance-sheet accounts, opening balance is the net approved opening baseline plus the net published actual balance from dates before the selected period.
+
+For income-statement accounts, opening balance is the fiscal-year-to-date net published actual balance from the fiscal-year start through the day before the selected period. This keeps the trial balance opening column consistent with the cumulative year-to-date position and preserves the debit/credit equality of the opening trial balance. At the fiscal-year start, income-statement opening balances are zero.
 
 Opening debit and credit are mutually exclusive: a net positive opening balance is reported as debit, and a net negative opening balance is reported as credit. The engine must never expose both sides of the same account as its opening balance merely because historical debits and credits were aggregated separately.
 
@@ -37,7 +39,7 @@ Debit/credit values are represented in minor currency units in the database and 
 
 ## 5. Filters
 
-All reporting dimension filters are applied consistently to both financial facts and opening balances. A dimension-specific opening balance is included only when it matches the selected dimension filter. An opening balance with a null dimension is treated as unassigned and is not attributed to a specific dimension when that dimension is filtered.
+All reporting dimension filters are applied consistently to financial facts and opening balances. A dimension-specific opening balance is included only when it matches the selected dimension filter. An opening balance with a null dimension is treated as unassigned and is not attributed to a specific dimension when that dimension is filtered.
 
 ## 6. Integrity
 
