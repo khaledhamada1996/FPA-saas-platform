@@ -63,13 +63,23 @@ function FilterMenu({ options, filters, setFilters, loading }: { options: Record
 function Row({ label, value, compare, level = 0, total = false, double = false }: { label: React.ReactNode; value: any; compare?: any; level?: number; total?: boolean; double?: boolean }) { return <div className={`grid grid-cols-[1fr_180px_180px] items-center border-b border-slate-100 py-2.5 text-sm ${total ? "font-bold" : ""} ${double ? "border-t-2 border-slate-300" : ""}`}><span style={{ paddingRight: `${level * 22}px` }}>{label}</span><span className="text-left tabular-nums">{formatMoneyMinor(value)}</span><span className="text-left tabular-nums text-slate-400">{compare === undefined ? "—" : formatMoneyMinor(compare)}</span></div>; }
 function Box({ title, children }: { title: string; children: React.ReactNode }) { return <section className="border border-slate-200 bg-white p-4"><h3 className="mb-3 text-sm font-bold text-slate-950">{title}</h3><div className="grid grid-cols-[1fr_180px_180px] border-b-2 border-slate-900 pb-2 text-[11px] font-bold text-slate-500"><span>البيان</span><span className="text-left">الفترة الحالية</span><span className="text-left">المقارنة</span></div>{children}</section>; }
 
-function AccountTree({ accounts }: { accounts: AccountLine[] }) {
+function AccountTree({ accounts, defaultExpandedLevels = 1 }: { accounts: AccountLine[]; defaultExpandedLevels?: number }) {
   const byParent = useMemo(() => { const map = new Map<string | null, AccountLine[]>(); for (const account of accounts) { const parent = account.parent_account_id ?? null; const list = map.get(parent) || []; list.push(account); map.set(parent, list); } for (const list of map.values()) list.sort((a, b) => a.code.localeCompare(b.code, undefined, { numeric: true })); return map; }, [accounts]);
   const visibleIds = useMemo(() => new Set(accounts.map(a => a.id)), [accounts]);
-  const parentIds = useMemo(() => new Set(accounts.map(a => a.parent_account_id).filter(Boolean) as string[]), [accounts]);
+  const defaultCollapsedIds = useMemo(() => {
+    const result = new Set<string>();
+    const visit = (parentId: string | null, semanticLevel: number) => {
+      for (const account of byParent.get(parentId) || []) {
+        const children = (byParent.get(account.id) || []).filter(c => visibleIds.has(c.id));
+        if (children.length > 0 && semanticLevel >= defaultExpandedLevels) result.add(account.id);
+        if (children.length > 0) visit(account.id, semanticLevel + 1);
+      }
+    };
+    visit(null, 1);
+    return result;
+  }, [byParent, visibleIds, defaultExpandedLevels]);
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
-  // Default view shows only the main account rows; children open from the arrow.
-  useEffect(() => { setCollapsed(new Set(parentIds)); }, [parentIds]);
+  useEffect(() => { setCollapsed(defaultCollapsedIds); }, [defaultCollapsedIds]);
   const toggle = (id: string) => setCollapsed(previous => { const next = new Set(previous); if (next.has(id)) next.delete(id); else next.add(id); return next; });
   const render = (parentId: string | null, level: number): React.ReactNode => (byParent.get(parentId) || []).filter(a => visibleIds.has(a.id)).map(account => {
     const children = (byParent.get(account.id) || []).filter(c => visibleIds.has(c.id));
@@ -114,11 +124,11 @@ function BalanceSheet({ accounts, data }: { accounts: AccountLine[]; data: any }
   const liabilitiesTotal = Number(data?.total_liabilities ?? total(liabilities));
   const equityTotal = Number(data?.total_equity ?? total(equity));
   return <div className="p-4"><Box title="قائمة المركز المالي">
-    <AccountTree accounts={assets} />
+    <AccountTree accounts={assets} defaultExpandedLevels={3} />
     <Row label="إجمالي الأصول" value={assetsTotal} total double />
-    <AccountTree accounts={liabilities} />
+    <AccountTree accounts={liabilities} defaultExpandedLevels={3} />
     <Row label="إجمالي الالتزامات" value={liabilitiesTotal} total double />
-    <AccountTree accounts={equity} />
+    <AccountTree accounts={equity} defaultExpandedLevels={3} />
     <Row label="إجمالي حقوق الملكية" value={equityTotal} total double />
     <Row label="إجمالي الالتزامات وحقوق الملكية" value={liabilitiesTotal + equityTotal} total double />
   </Box></div>;
