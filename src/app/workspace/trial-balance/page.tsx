@@ -24,6 +24,7 @@ export default function TrialBalancePage() {
   const [query, setQuery] = useState("");
   const [openFilters, setOpenFilters] = useState(false);
   const filterRef = useRef<HTMLDivElement>(null);
+  const requestId = useRef(0);
   const [loading, setLoading] = useState(true);
   const [running, setRunning] = useState(false);
   const [error, setError] = useState("");
@@ -53,14 +54,22 @@ export default function TrialBalancePage() {
 
   async function load() {
     if (!org || !range.start || !range.end || range.start > range.end) return;
-    setRunning(true); setError("");
-    const { data: result, error: e } = await supabase.rpc("get_trial_balance_date_range_filtered", {
-      p_organization_id: org, p_start_date: range.start, p_end_date: range.end,
-      p_branch_id: filters.branch || null, p_department_id: filters.department || null, p_cost_center_id: filters.costCenter || null,
-      p_region_id: filters.region || null, p_product_id: filters.product || null, p_project_id: filters.project || null, p_account_id: filters.account || null,
-    });
-    if (e) { setError(e.message); setData(null); } else setData(result as TrialBalance);
-    setRunning(false);
+    const currentRequest = ++requestId.current;
+    setRunning(true); setLoading(true); setError("");
+    try {
+      const { data: result, error: e } = await supabase.rpc("get_trial_balance_date_range_filtered", {
+        p_organization_id: org, p_start_date: range.start, p_end_date: range.end,
+        p_branch_id: filters.branch || null, p_department_id: filters.department || null, p_cost_center_id: filters.costCenter || null,
+        p_region_id: filters.region || null, p_product_id: filters.product || null, p_project_id: filters.project || null, p_account_id: filters.account || null,
+      });
+      if (currentRequest !== requestId.current) return;
+      if (e) { setError(e.message || "تعذر تحميل ميزان المراجعة"); setData(null); }
+      else setData(result as TrialBalance);
+    } catch (caught) {
+      if (currentRequest === requestId.current) { setError(caught instanceof Error ? caught.message : "تعذر تحميل ميزان المراجعة"); setData(null); }
+    } finally {
+      if (currentRequest === requestId.current) { setRunning(false); setLoading(false); }
+    }
   }
 
   useEffect(() => { if (org && range.start && range.end && range.start <= range.end) void load(); }, [org, range.start, range.end, filters.branch, filters.department, filters.costCenter, filters.region, filters.product, filters.project, filters.account]);
