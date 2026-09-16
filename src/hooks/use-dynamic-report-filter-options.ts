@@ -15,25 +15,25 @@ export function useDynamicReportFilterOptions(organizationId: string, filters: D
   const requestId = useRef(0);
   useEffect(() => {
     if (!organizationId) { setOptions(emptyDynamicReportFilterOptions); setLoading(false); return; }
+    if (!dateRange?.start || !dateRange?.end) { setOptions(emptyDynamicReportFilterOptions); setLoading(false); return; }
     const currentRequest = ++requestId.current;
     let cancelled = false;
     setLoading(true); setError("");
-    const hasDimensionFilter = Boolean(filters.branch || filters.department || filters.costCenter || filters.region || filters.product || filters.project);
-    const rpcPromise = supabase.rpc("get_dynamic_reporting_filter_options", {
-      p_organization_id: organizationId, p_start_date: dateRange?.start || null, p_end_date: dateRange?.end || null,
-      p_branch_id: filters.branch || null, p_department_id: filters.department || null, p_cost_center_id: filters.costCenter || null,
-      p_region_id: filters.region || null, p_product_id: filters.product || null, p_project_id: filters.project || null, p_account_id: filters.account || null,
-    });
-    const accountPromise = hasDimensionFilter ? Promise.resolve({ data: null, error: null }) : supabase.from("accounts").select("id,code,name,account_type,statement_type,statement_subclassification").eq("organization_id", organizationId).order("code");
-    void Promise.all([rpcPromise, accountPromise]).then(([rpcResult, accountResult]) => {
+    void supabase.rpc("get_dynamic_reporting_filter_options", {
+      p_organization_id: organizationId,
+      p_start_date: dateRange.start,
+      p_end_date: dateRange.end,
+      p_branch_id: filters.branch || null,
+      p_department_id: filters.department || null,
+      p_cost_center_id: filters.costCenter || null,
+      p_region_id: filters.region || null,
+      p_product_id: filters.product || null,
+      p_project_id: filters.project || null,
+      p_account_id: filters.account || null,
+    }).then(({ data, error: rpcError }) => {
       if (cancelled || currentRequest !== requestId.current) return;
-      if (rpcResult.error) { setError(rpcResult.error.message); setOptions(emptyDynamicReportFilterOptions); }
-      else {
-        const rpcOptions = { ...emptyDynamicReportFilterOptions, ...(rpcResult.data || {}) } as DynamicReportFilterOptions;
-        const accounts = hasDimensionFilter ? rpcOptions.accounts : accountResult.error ? rpcOptions.accounts : (accountResult.data || []).map(a => ({ id: a.id, code: a.code, name: a.name, type: a.account_type, statement_type: a.statement_type, subclassification: a.statement_subclassification }));
-        if (accountResult.error && !hasDimensionFilter) setError(accountResult.error.message);
-        setOptions({ ...rpcOptions, accounts });
-      }
+      if (rpcError) { setError(rpcError.message); setOptions(emptyDynamicReportFilterOptions); }
+      else setOptions({ ...emptyDynamicReportFilterOptions, ...(data || {}) } as DynamicReportFilterOptions);
       setLoading(false);
     });
     return () => { cancelled = true; };
