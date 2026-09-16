@@ -68,7 +68,8 @@ function AccountTree({ accounts }: { accounts: AccountLine[] }) {
   const visibleIds = useMemo(() => new Set(accounts.map(a => a.id)), [accounts]);
   const parentIds = useMemo(() => new Set(accounts.map(a => a.parent_account_id).filter(Boolean) as string[]), [accounts]);
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
-  useEffect(() => { setCollapsed(new Set()); }, [accounts]);
+  // Default view shows only the main account rows; children open from the arrow.
+  useEffect(() => { setCollapsed(new Set(parentIds)); }, [parentIds]);
   const toggle = (id: string) => setCollapsed(previous => { const next = new Set(previous); if (next.has(id)) next.delete(id); else next.add(id); return next; });
   const render = (parentId: string | null, level: number): React.ReactNode => (byParent.get(parentId) || []).filter(a => visibleIds.has(a.id)).map(account => {
     const children = (byParent.get(account.id) || []).filter(c => visibleIds.has(c.id));
