@@ -1,0 +1,14 @@
+revoke execute on function public.get_dynamic_reporting_filter_options(uuid, uuid, uuid, uuid, uuid, uuid, uuid, uuid, date, date) from public, anon;
+revoke execute on function public.get_import_review(uuid) from public, anon;
+revoke execute on function public.get_import_dimension_review(uuid) from public, anon;
+revoke execute on function public.get_import_dimension_target(uuid, text, text) from public, anon;
+revoke execute on function public.upsert_import_dimension_mapping(uuid, text, text, uuid) from public, anon;
+revoke execute on function public.review_import_dimension_mapping(uuid, text) from public, anon;
+revoke execute on function public.repair_published_actual_dimension_links(uuid) from public, anon;
+grant execute on function public.get_dynamic_reporting_filter_options(uuid, uuid, uuid, uuid, uuid, uuid, uuid, uuid, date, date) to authenticated;
+grant execute on function public.get_import_review(uuid) to authenticated;
+grant execute on function public.get_import_dimension_review(uuid) to authenticated;
+grant execute on function public.get_import_dimension_target(uuid, text, text) to authenticated;
+grant execute on function public.upsert_import_dimension_mapping(uuid, text, text, uuid) to authenticated;
+grant execute on function public.review_import_dimension_mapping(uuid, text) to authenticated;
+grant execute on function public.repair_published_actual_dimension_links(uuid) to authenticated;
