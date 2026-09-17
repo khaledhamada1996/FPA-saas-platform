@@ -5,11 +5,12 @@ import { createClient } from "@supabase/supabase-js";
 // The publishable key is safe for browser use; never use a secret/service-role key here.
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? "https://qnoulgkttxvnqdiisevv.supabase.co";
 const supabasePublishableKey =
-  process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ?? "sb_publishable_1VEncF0WwxH9JqeAeGWBrg_EiwCBQ9X";
+  process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ??
+  "sb_publishable_1VEncF0WwxH9JqeAeGWBrg_EiwCBQ9X";
 
 const rpcInFlight = new Map<string, Promise<Response>>();
 const rpcCache = new Map<string, { expiresAt: number; body: string; status: number; statusText: string; headers: [string, string][] }>();
-const RPC_CACHE_TTL_MS = 2500;
+const RPC_CACHE_TTL_MS = 5000;
 const READ_ONLY_RPC_CACHE = new Set([
   "get_financial_statements_date_range_filtered",
   "get_financial_statement_account_lines",
