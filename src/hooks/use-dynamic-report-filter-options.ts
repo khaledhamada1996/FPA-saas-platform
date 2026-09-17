@@ -8,7 +8,6 @@ export const emptyDynamicReportFilterOptions: DynamicReportFilterOptions = { bra
 export const emptyDynamicReportFilters: DynamicReportFilterState = { branch: "", department: "", costCenter: "", region: "", product: "", project: "", account: "" };
 const supabase = getSupabaseBrowserClient();
 
-const optionsCache = new Map<string, DynamicReportFilterOptions>();
 const CACHE_TTL_MS = 30_000;
 const DEBOUNCE_MS = 180;
 const cache = new Map<string, { at: number; value: DynamicReportFilterOptions }>();
