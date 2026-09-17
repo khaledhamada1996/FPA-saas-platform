@@ -72,9 +72,15 @@ const dedupeRpcFetch: typeof fetch = async (input, init) => {
   }
 };
 
-let browserClient: ReturnType<typeof createClient> | null = null;
+type BrowserSupabaseClient = Omit<ReturnType<typeof createClient>, "rpc"> & {
+  // The generated Supabase RPC overloads can lag behind database migrations.
+  // Keep normal client typing while allowing runtime-validated RPC signatures.
+  rpc: (...args: any[]) => any;
+};
 
-export function getSupabaseBrowserClient() {
+let browserClient: BrowserSupabaseClient | null = null;
+
+export function getSupabaseBrowserClient(): BrowserSupabaseClient {
   if (!supabaseUrl || !supabasePublishableKey) {
     throw new Error("Supabase client configuration is unavailable");
   }
@@ -89,7 +95,7 @@ export function getSupabaseBrowserClient() {
       global: {
         fetch: dedupeRpcFetch,
       },
-    });
+    }) as BrowserSupabaseClient;
   }
 
   return browserClient;
