@@ -6,7 +6,7 @@ const reports = [
   { title: "لوحة الإدارة التنفيذية", text: "ملخص مؤشرات الأداء والربحية والنمو والتنبيهات المالية.", href: "/workspace/executive-dashboard" },
   { title: "القوائم المالية", text: "قائمة الدخل والميزانية من البيانات الفعلية المنشورة.", href: "/workspace/financial-statements" },
   { title: "التحليل المالي", text: "النمو والهوامش والربحية والاتجاهات المالية.", href: "/workspace/financial-analysis" },
-  { title: "الفعلي مقابل الخطة", text: "الفروقات بين الفعلي والميزانية والتوقعات المعتمدة.", href: "/workspace/variance" },
+  { title: "الفعلي مقابل الخطة", text: "الفروقات بين الفعلي والميزانية والتنبؤ المالي المعتمد.", href: "/workspace/variance" },
   { title: "تحليل الأبعاد", text: "تحليل الفروع ومراكز التكلفة من البيانات الفعلية المنشورة.", href: "/workspace/dimensions" },
   { title: "المحلل المالي الذكي", text: "تفسير النتائج والتقارير اعتمادًا على السياق المالي الحتمي.", href: "/workspace/ai-analyst" },
 ];
