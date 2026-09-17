@@ -10,12 +10,9 @@ type Version = { id: string; name: string; status: string; version_type: string 
 type Row = { account_id: string; code: string; name: string; account_type: string | null; statement_subclassification: string | null; actual_minor: number; budget_minor: number; forecast_minor: number; variance_vs_budget_minor: number; variance_vs_forecast_minor: number | null; variance_vs_budget_pct: number | null };
 type Metric = { actual_minor: number; budget_minor: number; forecast_minor: number; variance_vs_budget_minor: number; variance_vs_forecast_minor: number | null };
 type Result = { rows: Row[]; metrics: Record<string, Metric> };
-type Option = { id: string; code?: string; name: string };
-type Options = { branches: Option[]; departments: Option[]; cost_centers: Option[]; regions: Option[]; products: Option[]; projects: Option[]; accounts: Option[] };
 
-const emptyOptions: Options = { branches: [], departments: [], cost_centers: [], regions: [], products: [], projects: [], accounts: [] };
 const metricLabels: Record<string, string> = { revenue: "الإيرادات", cogs: "تكلفة المبيعات", gross_profit: "مجمل الربح", opex: "المصروفات التشغيلية", ebitda: "EBITDA" };
-const expenseMetrics = new Set(["cogs", "operating_expense"]);
+const expenseMetrics = new Set(["cogs", "opex", "operating_expense"]);
 const isFavorable = (key: string, value: number) => expenseMetrics.has(key) ? value <= 0 : value >= 0;
 const sign = (value: number) => value > 0 ? "+" : "";
 const RUN_DEBOUNCE_MS = 220;
@@ -32,7 +29,6 @@ export default function VariancePage() {
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [options, setOptions] = useState<Options>(emptyOptions);
   const [filters, setFilters] = useState<ReportDimensionFilterState>(emptyReportDimensionFilters);
 
   const selectedPeriod = useMemo(() => periods.find((p) => p.id === period), [periods, period]);
@@ -43,10 +39,9 @@ export default function VariancePage() {
   const load = useCallback(async (id: string) => {
     setLoading(true);
     setError(null);
-    const [{ data: p, error: pe }, { data: v, error: ve }, { data: f }] = await Promise.all([
+    const [{ data: p, error: pe }, { data: v, error: ve }] = await Promise.all([
       supabase.from("financial_periods").select("id,period_start,period_end,status").eq("organization_id", id).order("period_start"),
       supabase.from("planning_versions").select("id,name,status,version_type").eq("organization_id", id).in("version_type", ["budget", "forecast"]).order("created_at", { ascending: false }),
-      supabase.rpc("get_reporting_filter_options", { p_organization_id: id }),
     ]);
     if (pe || ve) {
       setError((pe ?? ve)?.message ?? "تعذر تحميل بيانات المقارنة.");
@@ -58,7 +53,6 @@ export default function VariancePage() {
       setPeriod((current) => current && nextPeriods.some((x) => x.id === current) ? current : nextPeriods[0]?.id ?? "");
       setBudget((current) => current && nextVersions.some((x) => x.id === current && x.version_type === "budget" && x.status === "approved") ? current : nextVersions.find((x) => x.version_type === "budget" && x.status === "approved")?.id ?? "");
       setForecast((current) => current && nextVersions.some((x) => x.id === current && x.version_type === "forecast" && x.status === "approved") ? current : nextVersions.find((x) => x.version_type === "forecast" && x.status === "approved")?.id ?? "");
-      if (f) setOptions(f as Options);
     }
     setLoading(false);
   }, [supabase]);
@@ -125,7 +119,7 @@ export default function VariancePage() {
             <label className="text-[11px] font-bold text-slate-600">الفترة<select value={period} onChange={(e) => { setPeriod(e.target.value); setFilters(emptyReportDimensionFilters); }} className="input mt-1 w-full"><option value="">اختر الفترة</option>{periods.map((p) => <option key={p.id} value={p.id}>{formatDate(p.period_start)} → {formatDate(p.period_end)}</option>)}</select></label>
             <label className="text-[11px] font-bold text-slate-600">الميزانية المعتمدة<select value={budget} onChange={(e) => setBudget(e.target.value)} className="input mt-1 w-full"><option value="">الميزانية المعتمدة</option>{approvedBudgets.map((v) => <option key={v.id} value={v.id}>{v.name}</option>)}</select></label>
             <label className="text-[11px] font-bold text-slate-600">التوقع المعتمد<select value={forecast} onChange={(e) => setForecast(e.target.value)} className="input mt-1 w-full"><option value="">بدون توقع</option>{approvedForecasts.map((v) => <option key={v.id} value={v.id}>{v.name}</option>)}</select></label>
-            <div className="flex items-end"><ReportDimensionFilters options={options} filters={filters} setFilters={setFilters} dateRange={dateRange} /></div>
+            <div className="flex items-end"><ReportDimensionFilters filters={filters} setFilters={setFilters} dateRange={dateRange} /></div>
           </div>
         </section>
 
