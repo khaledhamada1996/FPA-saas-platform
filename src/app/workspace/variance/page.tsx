@@ -18,6 +18,7 @@ const metricLabels: Record<string, string> = { revenue: "الإيرادات", co
 const expenseMetrics = new Set(["cogs", "opex"]);
 const isFavorable = (key: string, value: number) => expenseMetrics.has(key) ? value <= 0 : value >= 0;
 const sign = (value: number) => value > 0 ? "+" : "";
+const RUN_DEBOUNCE_MS = 220;
 
 export default function VariancePage() {
   const supabase = getSupabaseBrowserClient();
@@ -92,7 +93,9 @@ export default function VariancePage() {
   }, [org, period, budget, forecast, filters, supabase]);
 
   useEffect(() => {
-    if (!loading) void run();
+    if (loading) return;
+    const timer = window.setTimeout(() => { void run(); }, RUN_DEBOUNCE_MS);
+    return () => window.clearTimeout(timer);
   }, [loading, run]);
 
   return (
