@@ -120,6 +120,11 @@ textarea.input { min-height: 100px; height: auto; padding-block: 0.55rem; }
 /* Keep existing workspace components visually consistent without changing their logic. */
 .workspace-control { min-height: var(--control-height); height: var(--control-height); border: 1px solid var(--border-strong); border-radius: var(--control-radius); background: #fff; font-size: .78rem; }
 
+/* Executive dashboard: use the available desktop canvas instead of constraining the board to a narrow report width. */
+@media (min-width: 1280px) {
+  main[dir="rtl"] > div[class*="max-w-[1560px]"] { max-width: 1800px; }
+}
+
 @media (min-width: 1536px) { :root { --content-max: 1500px; } }
 @media (max-width: 640px) {
   body { font-size: 15px; }
