@@ -21,6 +21,11 @@ type LineageRow = {
   created_at: string;
 };
 
+type DataLineageRpcResult = {
+  data: unknown;
+  error: { message?: string } | null;
+};
+
 export default function DataLineagePage() {
   const params = useSearchParams();
   const [org, setOrg] = useState("");
@@ -42,16 +47,28 @@ export default function DataLineagePage() {
     }
 
     const supabase = getSupabaseBrowserClient();
-    void supabase.rpc("get_data_lineage", {
-      p_organization_id: id,
-      p_normalized_entity_type: normalizedEntityType || null,
-      p_normalized_record_id: normalizedRecordId || null,
-      p_source_record_key: sourceRecordKey || null,
-    }).then(({ data, error: rpcError }) => {
-      if (rpcError) setError(rpcError.message);
-      else setRows((data || []) as LineageRow[]);
-      setLoading(false);
-    });
+    async function loadLineage() {
+      try {
+        const result = await ((supabase.rpc as any)(
+          "get_data_lineage",
+          {
+            p_organization_id: id,
+            p_normalized_entity_type: normalizedEntityType || null,
+            p_normalized_record_id: normalizedRecordId || null,
+            p_source_record_key: sourceRecordKey || null,
+          },
+        ) as Promise<DataLineageRpcResult>);
+
+        if (result.error) setError(result.error.message || "تعذر تحميل سلسلة البيانات.");
+        else setRows((result.data || []) as LineageRow[]);
+      } catch (e) {
+        setError(e instanceof Error ? e.message : "تعذر تحميل سلسلة البيانات.");
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    void loadLineage();
   }, [normalizedEntityType, normalizedRecordId, sourceRecordKey]);
 
   const title = useMemo(() => {
