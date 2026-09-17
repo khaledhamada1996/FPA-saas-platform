@@ -7,6 +7,7 @@ import { ReportDimensionFilters, emptyReportDimensionFilters, ReportDimensionFil
 
 type Period = { id: string; period_start: string; period_end: string; status: string };
 type Dashboard = { period: { start: string; end: string; status: string }; health: string; kpis: { revenue: number; gross_profit: number; ebitda: number; net_income: number; revenue_growth_pct: number | null; gross_margin_pct: number | null; ebitda_margin_pct: number | null; net_margin_pct: number | null }; alerts: Array<{ code: string; severity: string; title: string; value?: number }> };
+type DashboardRpcResult = { data: unknown; error: { message?: string } | null };
 const supabase = getSupabaseBrowserClient();
 
 export default function ExecutiveDashboardPage() {
@@ -44,22 +45,28 @@ export default function ExecutiveDashboardPage() {
     let cancelled = false;
     setRunning(true);
     setError("");
-    void supabase.rpc("get_executive_dashboard_filtered", {
-      p_organization_id: org,
-      p_period_id: period,
-      p_branch_id: filters.branch || null,
-      p_department_id: filters.department || null,
-      p_cost_center_id: filters.costCenter || null,
-      p_region_id: filters.region || null,
-      p_product_id: filters.product || null,
-      p_project_id: filters.project || null,
-      p_account_id: filters.account || null,
-    }).then(({ data: result, error: rpcError }) => {
-      if (cancelled) return;
-      if (rpcError) { setError(rpcError.message); setData(null); }
-      else setData(result as Dashboard);
-      setRunning(false);
-    });
+    ;(async () => {
+      try {
+        const result = await ((supabase.rpc as any)("get_executive_dashboard_filtered", {
+          p_organization_id: org,
+          p_period_id: period,
+          p_branch_id: filters.branch || null,
+          p_department_id: filters.department || null,
+          p_cost_center_id: filters.costCenter || null,
+          p_region_id: filters.region || null,
+          p_product_id: filters.product || null,
+          p_project_id: filters.project || null,
+          p_account_id: filters.account || null,
+        }) as Promise<DashboardRpcResult>);
+        if (cancelled) return;
+        if (result.error) { setError(result.error.message || "تعذر تحميل مؤشرات الأداء."); setData(null); }
+        else setData(result.data as Dashboard);
+      } catch (err) {
+        if (!cancelled) { setError(err instanceof Error ? err.message : "تعذر تحميل مؤشرات الأداء."); setData(null); }
+      } finally {
+        if (!cancelled) setRunning(false);
+      }
+    })();
     return () => { cancelled = true; };
   }, [org, period, filters.branch, filters.department, filters.costCenter, filters.region, filters.product, filters.project, filters.account]);
 
