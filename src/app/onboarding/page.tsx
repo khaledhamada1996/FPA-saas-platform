@@ -19,6 +19,11 @@ type OnboardingStatusRpcResult = {
   error: { message?: string } | null;
 };
 
+type CompleteOnboardingRpcResult = {
+  data: unknown;
+  error: { message?: string } | null;
+};
+
 const sources: Array<{ key: SourceKey; title: string; description: string; next: string; label: string }> = [
   { key: "excel", title: "لدي ملف Excel أو CSV", description: "سأرفع البيانات الفعلية وأمر على التحقق والمطابقة والمراجعة قبل النشر.", next: "/workspace/data", label: "البيانات والاستيراد" },
   { key: "manual", title: "سأبدأ من دليل الحسابات", description: "سأبني دليل حسابات الشركة أولًا ثم أستكمل ميزان المراجعة والبيانات.", next: "/workspace/data/accounts", label: "دليل الحسابات" },
@@ -41,7 +46,7 @@ export default function OnboardingPage() {
       if (!userData.user) { router.replace("/login?next=/onboarding"); return; }
       const organizationId = window.sessionStorage.getItem("activeOrganizationId");
       if (!organizationId) { router.replace("/start"); return; }
-      const result = await supabase.rpc("get_company_onboarding_status", { p_organization_id: organizationId }) as unknown as OnboardingStatusRpcResult;
+      const result = await (supabase.rpc as any)("get_company_onboarding_status", { p_organization_id: organizationId }) as OnboardingStatusRpcResult;
       const { data, error: rpcError } = result;
       if (rpcError || !data?.[0]) { if (active) { setError(rpcError?.message ?? "تعذر تحميل إعداد الشركة."); setLoading(false); } return; }
       const row = data[0];
@@ -57,10 +62,11 @@ export default function OnboardingPage() {
     setSaving(true); setError("");
     try {
       const supabase = getSupabaseBrowserClient();
-      const { data, error: rpcError } = await supabase.rpc("complete_company_onboarding", {
+      const result = await (supabase.rpc as any)("complete_company_onboarding", {
         p_organization_id: status.organization_id,
         p_initial_data_source: selected,
-      });
+      }) as CompleteOnboardingRpcResult;
+      const { data, error: rpcError } = result;
       if (rpcError) throw rpcError;
       const next = typeof data === "string" ? data : sources.find((item) => item.key === selected)?.next;
       if (!next) throw new Error("تعذر تحديد الخطوة التالية.");
