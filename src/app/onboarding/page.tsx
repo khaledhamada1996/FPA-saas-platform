@@ -14,6 +14,11 @@ type OnboardingStatus = {
 
 type SourceKey = "excel" | "manual" | "integration";
 
+type OnboardingStatusRpcResult = {
+  data: OnboardingStatus[] | null;
+  error: { message?: string } | null;
+};
+
 const sources: Array<{ key: SourceKey; title: string; description: string; next: string; label: string }> = [
   { key: "excel", title: "لدي ملف Excel أو CSV", description: "سأرفع البيانات الفعلية وأمر على التحقق والمطابقة والمراجعة قبل النشر.", next: "/workspace/data", label: "البيانات والاستيراد" },
   { key: "manual", title: "سأبدأ من دليل الحسابات", description: "سأبني دليل حسابات الشركة أولًا ثم أستكمل ميزان المراجعة والبيانات.", next: "/workspace/data/accounts", label: "دليل الحسابات" },
@@ -36,9 +41,10 @@ export default function OnboardingPage() {
       if (!userData.user) { router.replace("/login?next=/onboarding"); return; }
       const organizationId = window.sessionStorage.getItem("activeOrganizationId");
       if (!organizationId) { router.replace("/start"); return; }
-      const { data, error: rpcError } = await supabase.rpc("get_company_onboarding_status", { p_organization_id: organizationId });
+      const result = await supabase.rpc("get_company_onboarding_status", { p_organization_id: organizationId }) as unknown as OnboardingStatusRpcResult;
+      const { data, error: rpcError } = result;
       if (rpcError || !data?.[0]) { if (active) { setError(rpcError?.message ?? "تعذر تحميل إعداد الشركة."); setLoading(false); } return; }
-      const row = data[0] as OnboardingStatus;
+      const row = data[0];
       if (row.completed) { router.replace(row.next_route); return; }
       if (active) { setStatus(row); setLoading(false); }
     }
