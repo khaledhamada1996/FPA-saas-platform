@@ -119,17 +119,20 @@ textarea.input { min-height: 100px; height: auto; padding-block: 0.55rem; }
 
 .workspace-control { min-height: var(--control-height); height: var(--control-height); border: 1px solid var(--border-strong); border-radius: var(--control-radius); background: #fff; font-size: .78rem; }
 
-/* Executive dashboard: maximize desktop canvas and improve readability without affecting mobile layout. */
+/* Executive dashboard: full available desktop canvas; no artificial max-width. */
 @media (min-width: 1280px) {
-  main[dir="rtl"] > div[class*="max-w-[1560px]"] { max-width: 1900px; }
+  main[dir="rtl"] > div[class*="max-w-[1560px]"] {
+    width: calc(100vw - (var(--page-gutter) * 2));
+    max-width: none;
+    margin-inline: auto;
+  }
   main[dir="rtl"] > div[class*="max-w-[1560px]"] .text-\[18px\] { font-size: 22px; }
   main[dir="rtl"] > div[class*="max-w-[1560px]"] .text-\[26px\] { font-size: 30px; }
   main[dir="rtl"] > div[class*="max-w-[1560px]"] .text-\[11px\] { font-size: 12px; }
   main[dir="rtl"] > div[class*="max-w-[1560px]"] .text-\[10px\] { font-size: 11px; }
-  main[dir="rtl"] > div[class*="max-w-[1560px]"] svg.h-\[280px\] { height: 320px; }
+  main[dir="rtl"] > div[class*="max-w-[1560px]"] svg.h-\[280px\] { height: clamp(320px, 18vw, 520px); }
 }
 
-@media (min-width: 1536px) { :root { --content-max: 1500px; } }
 @media (max-width: 640px) {
   body { font-size: 15px; }
   .page-gutter { padding-inline: 1rem; }
