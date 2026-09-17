@@ -8,6 +8,15 @@ const supabasePublishableKey =
   process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ?? "sb_publishable_1VEncF0WwxH9JqeAeGWBrg_EiwCBQ9X";
 
 const rpcInFlight = new Map<string, Promise<Response>>();
+const rpcCache = new Map<string, { expiresAt: number; body: string; status: number; statusText: string; headers: [string, string][] }>();
+const RPC_CACHE_TTL_MS = 2500;
+const READ_ONLY_RPC_CACHE = new Set([
+  "get_financial_statements_date_range_filtered",
+  "get_financial_statement_account_lines",
+  "get_dynamic_reporting_filter_options",
+  "get_workspace_profile",
+  "get_activity_reporting_blueprint",
+]);
 
 const getRequestBody = (body: BodyInit | null | undefined) => {
   if (typeof body === "string") return body;
@@ -23,14 +32,41 @@ const dedupeRpcFetch: typeof fetch = async (input, init) => {
   const body = getRequestBody(init?.body ?? null);
   if (body === null) return fetch(request);
 
-  const key = `${request.method}|${request.url}|${body}`;
+  const functionName = request.url.split("/rest/v1/rpc/")[1]?.split("?")[0] || "";
+  const auth = request.headers.get("authorization") || "";
+  const key = `${request.method}|${request.url}|${auth}|${body}`;
+  const now = Date.now();
+
+  if (READ_ONLY_RPC_CACHE.has(functionName)) {
+    const cached = rpcCache.get(key);
+    if (cached && cached.expiresAt > now) {
+      return new Response(cached.body, {
+        status: cached.status,
+        statusText: cached.statusText,
+        headers: cached.headers,
+      });
+    }
+    if (cached) rpcCache.delete(key);
+  }
+
   const existing = rpcInFlight.get(key);
   if (existing) return (await existing).clone();
 
   const pending = fetch(request);
   rpcInFlight.set(key, pending);
   try {
-    return (await pending).clone();
+    const response = await pending;
+    if (READ_ONLY_RPC_CACHE.has(functionName) && response.ok) {
+      const bodyText = await response.clone().text();
+      rpcCache.set(key, {
+        expiresAt: now + RPC_CACHE_TTL_MS,
+        body: bodyText,
+        status: response.status,
+        statusText: response.statusText,
+        headers: Array.from(response.headers.entries()),
+      });
+    }
+    return response.clone();
   } finally {
     rpcInFlight.delete(key);
   }
