@@ -3,9 +3,16 @@
 import { useEffect, useState } from 'react'
 import { getSupabaseBrowserClient } from '@/lib/supabase/client'
 
+type FinancialPeriod = {
+  id: string
+  period_start: string
+  period_end: string
+  status: string | null
+}
+
 export default function DimensionsPage() {
   const [organizationId, setOrganizationId] = useState('')
-  const [periods, setPeriods] = useState<any[]>([])
+  const [periods, setPeriods] = useState<FinancialPeriod[]>([])
   const [periodId, setPeriodId] = useState('')
   const [dimension, setDimension] = useState<'branch' | 'cost_center'>('branch')
   const [rows, setRows] = useState<any[]>([])
@@ -17,7 +24,12 @@ export default function DimensionsPage() {
     setOrganizationId(id)
     if (!id) { setLoading(false); setError('لم يتم تحديد المؤسسة النشطة'); return }
     ;(async () => {
-      const { data, error } = await getSupabaseBrowserClient().from('financial_periods').select('id,period_start,period_end,status').eq('organization_id', id).order('period_end', { ascending: false })
+      const { data, error } = await getSupabaseBrowserClient()
+        .from('financial_periods')
+        .select('id,period_start,period_end,status')
+        .eq('organization_id', id)
+        .order('period_end', { ascending: false })
+        .overrideTypes<FinancialPeriod[], { merge: false }>()
       if (error) setError(error.message)
       else { setPeriods(data || []); setPeriodId(data?.[0]?.id || '') }
       setLoading(false)
