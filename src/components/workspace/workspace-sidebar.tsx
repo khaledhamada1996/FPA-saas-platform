@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 
-type AccessRow={permission_key?:string;granted?:boolean}; type NavItem=readonly[string,string,string,string]; type NavSection=readonly[string,readonly NavItem[]];
+type AccessRow={permission_key?:string;granted?:boolean}; type NavItem=readonly [string,string,string,string]; type NavSection=readonly [string,readonly NavItem[]][];
 const navigation:NavSection=[
  ["نظرة عامة",[["screen.executive_dashboard.view","لوحة المؤشرات","/workspace/executive-dashboard","▦"]]],
  ["البيانات",[["screen.data.view","مركز البيانات المالية","/workspace/data","◈"],["screen.actuals.view","البيانات الفعلية","/workspace/actuals","✓"],["screen.trial_balance.view","ميزان المراجعة","/workspace/trial-balance","≡"]]],
