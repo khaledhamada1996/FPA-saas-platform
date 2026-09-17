@@ -8,6 +8,15 @@ export const emptyDynamicReportFilterOptions: DynamicReportFilterOptions = { bra
 export const emptyDynamicReportFilters: DynamicReportFilterState = { branch: "", department: "", costCenter: "", region: "", product: "", project: "", account: "" };
 const supabase = getSupabaseBrowserClient();
 
+const optionsCache = new Map<string, DynamicReportFilterOptions>();
+const CACHE_TTL_MS = 30_000;
+const DEBOUNCE_MS = 180;
+const cache = new Map<string, { at: number; value: DynamicReportFilterOptions }>();
+
+function cacheKey(organizationId: string, dateRange: { start: string; end: string }, filters: DynamicReportFilterState) {
+  return JSON.stringify([organizationId, dateRange.start, dateRange.end, filters.branch, filters.department, filters.costCenter, filters.region, filters.product, filters.project, filters.account]);
+}
+
 export function useDynamicReportFilterOptions(organizationId: string, filters: DynamicReportFilterState, dateRange?: { start: string; end: string }) {
   const [options, setOptions] = useState<DynamicReportFilterOptions>(emptyDynamicReportFilterOptions);
   const [loading, setLoading] = useState(false);
@@ -24,10 +33,18 @@ export function useDynamicReportFilterOptions(organizationId: string, filters: D
 
     const currentRequest = ++requestId.current;
     let cancelled = false;
+    const key = cacheKey(organizationId, dateRange, filters);
+    const cached = cache.get(key);
+    if (cached && Date.now() - cached.at < CACHE_TTL_MS) {
+      setOptions(cached.value);
+      setLoading(false);
+      setError("");
+      return;
+    }
+
     setLoading(true);
     setError("");
-
-    const load = async () => {
+    const timer = window.setTimeout(async () => {
       try {
         const { data, error: rpcError } = await supabase.rpc("get_dynamic_reporting_filter_options", {
           p_organization_id: organizationId,
@@ -48,7 +65,9 @@ export function useDynamicReportFilterOptions(organizationId: string, filters: D
           setOptions(emptyDynamicReportFilterOptions);
           return;
         }
-        setOptions({ ...emptyDynamicReportFilterOptions, ...(data || {}) } as DynamicReportFilterOptions);
+        const next = { ...emptyDynamicReportFilterOptions, ...(data || {}) } as DynamicReportFilterOptions;
+        cache.set(key, { at: Date.now(), value: next });
+        setOptions(next);
       } catch (caught) {
         if (cancelled || currentRequest !== requestId.current) return;
         setError(caught instanceof Error ? caught.message : "تعذر تحميل خيارات الأبعاد");
@@ -56,10 +75,12 @@ export function useDynamicReportFilterOptions(organizationId: string, filters: D
       } finally {
         if (!cancelled && currentRequest === requestId.current) setLoading(false);
       }
-    };
+    }, DEBOUNCE_MS);
 
-    void load();
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
   }, [organizationId, dateRange?.start, dateRange?.end, filters.branch, filters.department, filters.costCenter, filters.region, filters.product, filters.project, filters.account]);
 
   return { options, loading, error };
