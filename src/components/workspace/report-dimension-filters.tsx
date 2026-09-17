@@ -8,6 +8,7 @@ export type ReportDimensionFilterState = { branch: string; department: string; c
 export const emptyReportDimensionFilters: ReportDimensionFilterState = { branch: "", department: "", costCenter: "", region: "", product: "", project: "", account: "" };
 type Options = { branches: Option[]; departments: Option[]; cost_centers: Option[]; regions: Option[]; products: Option[]; projects: Option[]; accounts: Option[] };
 const fallback: Options = { branches: [], departments: [], cost_centers: [], regions: [], products: [], projects: [], accounts: [] };
+type DynamicFilterRpcResult = { data: unknown; error: { message?: string } | null };
 
 export function ReportDimensionFilters({
   options,
@@ -44,28 +45,36 @@ export function ReportDimensionFilters({
     const requestId = ++requestRef.current;
     setLoading(true);
     setError("");
-    void supabase.rpc("get_dynamic_reporting_filter_options", {
-      p_organization_id: organizationId,
-      p_branch_id: filters.branch || null,
-      p_department_id: filters.department || null,
-      p_cost_center_id: filters.costCenter || null,
-      p_region_id: filters.region || null,
-      p_product_id: filters.product || null,
-      p_project_id: filters.project || null,
-      p_account_id: filters.account || null,
-      p_start_date: dateRange?.start || null,
-      p_end_date: dateRange?.end || null,
-    }).then(({ data, error: rpcError }) => {
-      if (cancelled || requestId !== requestRef.current) return;
-      if (rpcError) {
-        setError(rpcError.message);
-      } else if (data) {
-        setDynamicOptions({ ...fallback, ...data });
-      } else {
-        setDynamicOptions(fallback);
+    void (async () => {
+      try {
+        const result = await ((supabase.rpc("get_dynamic_reporting_filter_options", {
+          p_organization_id: organizationId,
+          p_branch_id: filters.branch || null,
+          p_department_id: filters.department || null,
+          p_cost_center_id: filters.costCenter || null,
+          p_region_id: filters.region || null,
+          p_product_id: filters.product || null,
+          p_project_id: filters.project || null,
+          p_account_id: filters.account || null,
+          p_start_date: dateRange?.start || null,
+          p_end_date: dateRange?.end || null,
+        }) as Promise<DynamicFilterRpcResult>));
+        if (cancelled || requestId !== requestRef.current) return;
+        if (result.error) {
+          setError(result.error.message || "تعذر تحميل خيارات الأبعاد.");
+        } else if (result.data) {
+          setDynamicOptions({ ...fallback, ...(result.data as Partial<Options>) });
+        } else {
+          setDynamicOptions(fallback);
+        }
+      } catch (err) {
+        if (!cancelled && requestId === requestRef.current) {
+          setError(err instanceof Error ? err.message : "تعذر تحميل خيارات الأبعاد.");
+        }
+      } finally {
+        if (!cancelled && requestId === requestRef.current) setLoading(false);
       }
-      setLoading(false);
-    });
+    })();
 
     return () => { cancelled = true; };
   }, [dateRange?.start, dateRange?.end, filters.branch, filters.department, filters.costCenter, filters.region, filters.product, filters.project, filters.account]);
