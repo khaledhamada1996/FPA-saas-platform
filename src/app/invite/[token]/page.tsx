@@ -5,6 +5,11 @@ import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 
+type InviteResult = {
+  ok: boolean;
+  organization_id: string;
+};
+
 export default function InvitePage(){
   const params=useParams<{token:string}>();
   const router=useRouter();
@@ -22,11 +27,7 @@ export default function InvitePage(){
       if(!session){if(active)setStatus("login");return;}
       const email=session.user.email||"";
       if(active)setCurrentEmail(email);
-      // The generated Supabase client types in this repository do not currently
-      // expose the accept_team_invite_link RPC signature, while the live database
-      // defines it as (p_token text) -> jsonb. Keep the runtime call unchanged and
-      // isolate the temporary type gap to this RPC call.
-      const {data,error}=await supabase.rpc("accept_team_invite_link",{p_token:token} as any);
+      const {data,error}=await supabase.rpc("accept_team_invite_link",{p_token:token} as any) as { data: InviteResult | null; error: { message?: string } | null };
       if(error||!data?.ok){
         if(active){
           if(error?.message?.includes("INVITE_EMAIL_MISMATCH")){
