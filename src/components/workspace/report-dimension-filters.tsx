@@ -105,19 +105,33 @@ export function ReportDimensionFilters({
   }, [normalized]);
 
   return <div className="relative">
-    <button type="button" aria-expanded={open} onClick={() => setOpen(!open)} className={`min-h-10 border px-3 text-xs font-bold transition ${count ? "border-slate-950 bg-slate-950 text-white" : "border-slate-300 bg-white text-slate-800 hover:bg-slate-50"}`}>
-      الأبعاد{count ? ` · ${count}` : ""}{loading ? " · …" : ""}⌄
+    <button
+      type="button"
+      aria-expanded={open}
+      onClick={() => setOpen(!open)}
+      className={`erp-button inline-flex items-center gap-1 ${count ? "erp-button-primary" : ""}`}
+    >
+      الأبعاد{count ? ` · ${count}` : ""}{loading ? " · …" : ""}<span aria-hidden="true">⌄</span>
     </button>
-    {open && <div className="absolute right-0 top-11 z-50 w-[min(94vw,520px)] border border-slate-200 bg-white p-4 shadow-xl">
-      <div className="mb-4 flex items-center justify-between border-b border-slate-100 pb-3">
-        <div><p className="text-sm font-bold text-slate-950">أبعاد التقرير</p><p className="mt-1 text-[11px] text-slate-500">الخيارات مبنية على البيانات الفعلية المنشورة والفترة والفلاتر الحالية</p></div>
-        <button type="button" onClick={clear} disabled={!count || loading} className="text-[11px] font-bold text-slate-500 disabled:opacity-40">مسح الكل</button>
+    {open && <div className="erp-panel absolute right-0 top-9 z-50 w-[min(94vw,560px)] p-3">
+      <div className="mb-3 flex items-center justify-between border-b border-slate-200 pb-2.5">
+        <div><p className="text-xs font-bold text-slate-950">أبعاد التقرير</p><p className="mt-0.5 text-[10px] text-slate-500">الخيارات مبنية على البيانات المنشورة والفترة والفلاتر الحالية</p></div>
+        <button type="button" onClick={clear} disabled={!count || loading} className="erp-button h-7 min-h-7 px-2.5 text-[10px] disabled:opacity-40">مسح الكل</button>
       </div>
-      <div className="grid gap-3 sm:grid-cols-2">
-        {fields.map(([key, label, english, items]) => <label key={key} title={english} className="text-[11px] font-bold text-slate-600">{label}<select value={filters[key]} disabled={loading} onChange={e => setFilters({ ...filters, [key]: e.target.value })} className="mt-1 min-h-10 w-full border border-slate-300 bg-white px-2 text-xs text-slate-900 outline-none focus:border-slate-950 disabled:bg-slate-50"><option value="">الكل</option>{items.map(x => <option key={x.id} value={x.id}>{x.code ? `${x.code} — ` : ""}{x.name}</option>)}</select></label>)}
+      <div className="grid gap-2.5 sm:grid-cols-2">
+        {fields.map(([key, label, english, items]) => <label key={key} title={english} className="text-[10px] font-bold text-slate-600">
+          {label}
+          <select value={filters[key]} disabled={loading} onChange={e => setFilters({ ...filters, [key]: e.target.value })} className="erp-control mt-1 block w-full text-slate-900 outline-none disabled:bg-slate-50">
+            <option value="">الكل</option>
+            {items.map(x => <option key={x.id} value={x.id}>{x.code ? `${x.code} — ` : ""}{x.name}</option>)}
+          </select>
+        </label>)}
       </div>
-      {error && <p className="mt-3 border border-red-200 bg-red-50 p-2 text-[10px] text-red-700">{error}</p>}
-      <div className="mt-4 flex items-center justify-between border-t border-slate-100 pt-3"><span className="text-[10px] text-slate-400">{count ? `تم اختيار ${count} من 7 أبعاد` : "لم يتم اختيار أبعاد"}</span><button type="button" onClick={() => setOpen(false)} className="min-h-9 bg-slate-950 px-4 text-xs font-bold text-white">تم</button></div>
+      {error && <p className="mt-2.5 border border-red-200 bg-red-50 p-2 text-[10px] text-red-700">{error}</p>}
+      <div className="mt-3 flex items-center justify-between border-t border-slate-200 pt-2.5">
+        <span className="text-[10px] text-slate-400">{count ? `تم اختيار ${count} من 7 أبعاد` : "لم يتم اختيار أبعاد"}</span>
+        <button type="button" onClick={() => setOpen(false)} className="erp-button erp-button-primary">تم</button>
+      </div>
     </div>}
   </div>;
 }
