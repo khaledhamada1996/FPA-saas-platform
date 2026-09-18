@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 
 const sections = [
   { title: "دليل الحسابات", subtitle: "شجرة الحسابات التي يُبنى عليها التصنيف والتحليل والقوائم المالية", href: "/workspace/data/accounts", action: "فتح دليل الحسابات", permission: "screen.accounts.view", formats: ["XLSX", "CSV"] },
-  { title: "القيود اليومية", subtitle: "الحركات المالية التفصيلية التي يمكن تحويلها إلى بيانات فعلية معتمدة", href: "/workspace/data/import", action: "استيراد القيود", permission: "screen.data.view", formats: ["XLSX", "CSV"] },
+  { title: "القيود اليومية", subtitle: "عرض القيود المنشورة والبحث فيها وفتح القيد وتعديل المسودة أو إنشاء إصدار تعديل للقيد المنشور", href: "/workspace/data/journals", action: "فتح قيود اليومية", permission: "screen.actuals.view", formats: ["عرض", "تعديل"] },
   { title: "الأرصدة الافتتاحية", subtitle: "أرصدة الحسابات الموجودة قبل بدء إدخال قيود اليومية، مستقلة عن حركة الفترة", href: "/workspace/data/opening-balances", action: "إدارة الأرصدة الافتتاحية", permission: "screen.data.view", formats: ["يدوي"] },
   { title: "مراقبة مصادر البيانات", subtitle: "متابعة حالة مصادر البيانات والاستيرادات واكتشاف المشكلات قبل اعتمادها في النموذج المالي", href: "/workspace/data-monitoring", action: "فتح المراقبة", permission: "screen.data_monitoring.view", formats: [] },
   { title: "ميزان المراجعة", subtitle: "أرصدة الحسابات حسب الفترة عندما لا تتوفر الحركات التفصيلية", href: "/workspace/trial-balance", action: "فتح ميزان المراجعة", permission: "screen.trial_balance.view", formats: ["XLSX", "CSV"] },
