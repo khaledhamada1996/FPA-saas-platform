@@ -1,55 +1,15 @@
 "use client";
-
 import Link from "next/link";
-import { useEffect, useState } from "react";
-
-const sections = [
-  { title: "دليل الحسابات", subtitle: "شجرة الحسابات التي يُبنى عليها التصنيف والتحليل والقوائم المالية", href: "/workspace/data/accounts", action: "فتح دليل الحسابات", permission: "screen.accounts.view", formats: ["XLSX", "CSV"] },
-  { title: "القيود اليومية", subtitle: "عرض القيود المنشورة والبحث فيها وفتح القيد وتعديل المسودة أو إنشاء إصدار تعديل للقيد المنشور", href: "/workspace/data/journals", action: "فتح قيود اليومية", permission: "screen.actuals.view", formats: ["عرض", "تعديل"] },
-  { title: "الأرصدة الافتتاحية", subtitle: "أرصدة الحسابات الموجودة قبل بدء إدخال قيود اليومية، مستقلة عن حركة الفترة", href: "/workspace/data/opening-balances", action: "إدارة الأرصدة الافتتاحية", permission: "screen.data.view", formats: ["يدوي"] },
-  { title: "مراقبة مصادر البيانات", subtitle: "متابعة حالة مصادر البيانات والاستيرادات واكتشاف المشكلات قبل اعتمادها في النموذج المالي", href: "/workspace/data-monitoring", action: "فتح المراقبة", permission: "screen.data_monitoring.view", formats: [] },
-  { title: "ميزان المراجعة", subtitle: "أرصدة الحسابات حسب الفترة عندما لا تتوفر الحركات التفصيلية", href: "/workspace/trial-balance", action: "فتح ميزان المراجعة", permission: "screen.trial_balance.view", formats: ["XLSX", "CSV"] },
-  { title: "سجل البيانات", subtitle: "تتبع عمليات الاستيراد وحالتها ومصدرها بدل فقدان أثر البيانات", href: "/workspace/data/history", action: "عرض السجل", permission: "screen.data_history.view", formats: [] },
+import { useEffect,useState } from "react";
+type Access={permission_key?:string;granted?:boolean};
+const sections=[
+ {title:"إدخال البيانات",subtitle:"أدخل قيدًا يدويًا أو ارفع ملف القيود. بعد التحقق ينتقل المصدر إلى المراجعة ثم النشر.",href:"/workspace/data/import",action:"بدء إدخال البيانات",permission:"screen.data.view"},
+ {title:"قيود اليومية",subtitle:"ابحث في القيود المنشورة، افتح تفاصيل أي قيد، وعدّل القيد المنشور بإصدار جديد مع حفظ الأثر.",href:"/workspace/data/journals",action:"فتح القيود",permission:"screen.actuals.view"},
+ {title:"دليل الحسابات والأرصدة الافتتاحية",subtitle:"جهّز الأساس المحاسبي للشركة قبل الحركة: الحسابات والأرصدة الافتتاحية.",href:"/workspace/data/accounts",action:"إدارة الأساس المحاسبي",permission:"screen.accounts.view"},
+ {title:"ميزان المراجعة",subtitle:"تحقق من أرصدة الحسابات والحركة والافتتاح والإغلاق بعد اعتماد البيانات.",href:"/workspace/trial-balance",action:"فتح الميزان",permission:"screen.trial_balance.view"}
 ];
+export default function FinancialDataHub(){
+ const[allowed,setAllowed]=useState<Set<string>>(new Set());
 
-export default function FinancialDataHub() {
-  const [allowed, setAllowed] = useState<Set<string>>(new Set());
-  useEffect(() => {
-    let alive = true;
-    async function load() {
-      const { getSupabaseBrowserClient } = await import("@/lib/supabase/client");
-      const supabase = getSupabaseBrowserClient();
-      const organizationId = window.sessionStorage.getItem("activeOrganizationId");
-      if (!organizationId) return;
-      const { data } = await supabase.rpc("get_my_org_access", { p_organization_id: organizationId });
-      if (alive) setAllowed(new Set((data ?? []).filter((row: { granted?: boolean }) => row.granted === true).map((row: { permission_key?: string }) => row.permission_key).filter(Boolean)));
-    }
-    void load();
-    return () => { alive = false; };
-  }, []);
-
-  return <main dir="rtl" className="min-h-screen bg-[#f7f8fa] text-slate-900">
-    <header className="border-b border-slate-200 bg-white">
-      <div className="mx-auto px-4 py-6 sm:px-6 lg:px-8">
-        <p className="text-[10px] font-bold tracking-[0.16em] text-slate-400">FINANCIAL DATA HUB</p>
-        <div className="mt-2 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between"><div><h1 className="text-2xl font-bold text-slate-950">مركز البيانات المالية</h1><p className="mt-2 max-w-3xl text-sm leading-7 text-slate-500">مكان واحد لإدارة مصادر البيانات المالية وتجهيزها قبل استخدامها في التخطيط والتحليل والتقارير. كل مصدر يحتفظ بدوره ولا يتم خلط القيود بالأرصدة الافتتاحية أو ميزان المراجعة أو دليل الحسابات.</p></div><span className="text-xs font-semibold text-slate-400">CSV · XLSX</span></div>
-      </div>
-    </header>
-
-    <section className="px-4 py-6 sm:px-6 lg:px-8">
-      <div className="border border-slate-200 bg-white">
-        {sections.map((section, index) => {
-          const canOpen = allowed.has(section.permission);
-          return <div key={section.href} className={`flex flex-col gap-4 px-5 py-5 sm:flex-row sm:items-center sm:justify-between sm:px-6 ${index > 0 ? "border-t border-slate-100" : ""}`}>
-            <div className="min-w-0"><div className="flex flex-wrap items-center gap-2"><h2 className="text-sm font-bold text-slate-950 sm:text-base">{section.title}</h2>{section.formats.map((format) => <span key={format} className="border border-slate-200 px-2 py-1 text-[10px] font-bold text-slate-500">{format}</span>)}</div><p className="mt-1 max-w-3xl text-xs leading-6 text-slate-500 sm:text-sm">{section.subtitle}</p></div>
-            {canOpen ? <Link href={section.href} className="shrink-0 text-xs font-bold text-slate-700 underline decoration-slate-300 underline-offset-4 hover:text-slate-950">{section.action} ←</Link> : <span className="shrink-0 text-[11px] font-semibold text-slate-400">لا توجد صلاحية</span>}
-          </div>;
-        })}
-      </div>
-
-      <div className="mt-6 border border-slate-200 bg-white px-5 py-5 sm:px-6">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between"><div><p className="text-xs font-bold text-slate-400">دورة البيانات</p><h2 className="mt-1 text-sm font-bold text-slate-950">من المصدر إلى الرقم المعتمد</h2><p className="mt-2 text-xs leading-6 text-slate-500">اختيار النوع → رفع الملف أو إدخال الرصيد الافتتاحي → التحقق → المراجعة → النشر. الأرصدة الافتتاحية منفصلة عن القيود اليومية ولا تدخل في نتيجة قائمة الدخل.</p></div><Link href="/workspace/data/import" className="shrink-0 text-xs font-bold text-slate-700 underline decoration-slate-300 underline-offset-4">بدء استيراد القيود ←</Link></div>
-      </div>
-    </section>
-  </main>;
-}
+ useEffect(()=>{let alive=true;async function load(){const{getSupabaseBrowserClient}=await import("@/lib/supabase/client");const s=getSupabaseBrowserClient();const id=window.sessionStorage.getItem("activeOrganizationId");if(!id)return;const{data}=await s.rpc("get_my_org_access",{p_organization_id:id});if(alive)setAllowed(new Set((data??[]).filter((x:Access)=>x.granted).map((x:Access)=>x.permission_key).filter(Boolean) as string[]))}void load();return()=>{alive=false}},[]);
+ return <main dir="rtl" className="min-h-[calc(100vh-84px)] bg-[#f7f8fa] text-slate-900"><header className="border-b border-slate-200 bg-white"><div className="px-4 py-6 sm:px-6 lg:px-8"><p className="eyebrow">FINANCIAL DATA</p><h1 className="mt-1 text-2xl font-bold text-slate-950">البيانات المالية</h1><p className="mt-2 max-w-3xl text-sm leading-7 text-slate-500">ابدأ من المصدر، راجع واعتمد البيانات، ثم استخدم نفس البيانات في ميزان المراجعة والقوائم والتحليل. لا تحتاج إلى التنقل بين شاشات داخلية إلا عند الحاجة.</p></div></header><section className="px-4 py-6 sm:px-6 lg:px-8"><div className="border border-slate-200 bg-white">{sections.map((x,i)=>{const can=allowed.has(x.permission);return <div key={x.href} className={`flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6 ${i?"border-t border-slate-100":""}`}><div><h2 className="text-base font-extrabold text-slate-950">{x.title}</h2><p className="mt-1 max-w-3xl text-sm leading-6 text-slate-500">{x.subtitle}</p></div>{can?<Link href={x.href} className="shrink-0 text-xs font-bold text-slate-700 underline decoration-slate-300 underline-offset-4">{x.action} ←</Link>:<span className="text-[11px] text-slate-400">لا توجد صلاحية</span>}</div>})}</div><div className="mt-5 border border-slate-200 bg-slate-950 p-5 text-white"><p className="eyebrow text-slate-500">WORKFLOW</p><h2 className="mt-1 text-base font-extrabold">المسار المقترح</h2><p className="mt-2 text-sm leading-7 text-slate-300">إدخال أو استيراد → تحقق ومراجعة → نشر → ميزان مراجعة → قوائم وتحليل → لوحة الإدارة.</p></div></section></main>
