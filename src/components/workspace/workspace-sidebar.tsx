@@ -17,7 +17,7 @@ const navigation:NavSection=[
    ["screen.financial_analysis.view","التحليل المالي","/workspace/analysis","◒"],
    ["screen.financial_statements.view","القوائم والتقارير","/workspace/financial-statements","▤"]
  ]],
- ["الإدارة",[["screen.team.view","الفريق والصلاحيات","/workspace/team","♙"],["screen.audit.view","سجل العمليات","/workspace/audit","◷"],["screen.company_profile.view","ملف الشركة","/workspace/company-profile","○"]]]
+ ["إدارة النظام",[["screen.team.view","الفريق والصلاحيات","/workspace/team","♙"],["screen.audit.view","سجل العمليات","/workspace/audit","◷"],["screen.company_profile.view","ملف الشركة","/workspace/company-profile","○"]]]
 ];
 
 function NavLink({item,allowed,pathname}:{item:NavItem;allowed:Set<string>;pathname:string}){
