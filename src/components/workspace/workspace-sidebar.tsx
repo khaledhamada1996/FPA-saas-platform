@@ -8,7 +8,7 @@ type AccessRow={permission_key?:string;granted?:boolean}; type NavItem=readonly 
 const navigation:NavSection=[
  ["مساحة العمل",[["workspace.home.view","الرئيسية","/workspace","⌂"]]],
  ["نظرة عامة",[["screen.executive_dashboard.view","لوحة المؤشرات","/workspace/executive-dashboard","▦"]]],
- ["البيانات",[["screen.data.view","مركز البيانات المالية","/workspace/data","◈"],["screen.actuals.view","البيانات الفعلية","/workspace/actuals","✓"],["screen.trial_balance.view","ميزان المراجعة","/workspace/trial-balance","≡"]]],
+ ["البيانات",[["screen.data.view","مركز البيانات المالية","/workspace/data","◈"],["screen.actuals.view","قيود اليومية","/workspace/data/journals","≡"],["screen.actuals.view","البيانات الفعلية","/workspace/actuals","✓"],["screen.trial_balance.view","ميزان المراجعة","/workspace/trial-balance","≡"]]],
  ["التخطيط",[["screen.budget.view","الميزانية","/workspace/budget","□"],["screen.forecast.view","التنبؤ المالي","/workspace/forecast","⌁"],["screen.scenarios.view","السيناريوهات","/workspace/scenarios","◇"]]],
  ["التحليل",[["screen.financial_analysis.view","التحليل المالي","/workspace/financial-analysis","◒"],["screen.variance.view","الفروقات","/workspace/variance","±"],["screen.cash.view","التدفق النقدي","/workspace/cash","↗"]]],
  ["التقارير",[["screen.financial_statements.view","القوائم المالية","/workspace/financial-statements","▤"],["screen.reports.view","التقارير","/workspace/reports","▥"],["screen.group_reporting.view","تقارير المجموعة","/workspace/group-reporting","◎"],["screen.financial_statements.view","الزكاة وضريبة الدخل","/workspace/tax-zakat","٪"]]],
