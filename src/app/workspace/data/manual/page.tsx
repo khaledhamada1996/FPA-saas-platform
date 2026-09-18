@@ -179,8 +179,7 @@ export default function ManualEntryPage() {
                 <th className="border-b border-slate-200 px-2 py-3 text-right">التاريخ *</th>
                 <th className="border-b border-slate-200 px-2 py-3 text-right">رقم القيد *</th>
                 <th className="min-w-[220px] border-b border-slate-200 px-2 py-3 text-right">بيان القيد *</th>
-                <th className="border-b border-slate-200 px-2 py-3 text-right">رقم الحساب *</th>
-                <th className="min-w-[180px] border-b border-slate-200 px-2 py-3 text-right">اسم الحساب *</th>
+                <th className="min-w-[260px] border-b border-slate-200 px-2 py-3 text-right">الحساب *</th>
                 <th className="border-b border-slate-200 px-2 py-3 text-right">مدين *</th>
                 <th className="border-b border-slate-200 px-2 py-3 text-right">دائن *</th>
                 <th className="w-14 border-b border-slate-200 px-2 py-3"></th>
