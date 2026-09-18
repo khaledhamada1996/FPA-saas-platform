@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 
@@ -15,7 +15,7 @@ type Entry = {
   credit: string;
 };
 
-type Account = { code: string; name: string };
+type Account = { id: string; code: string; name: string };
 
 const blank = (): Entry => ({
   id: crypto.randomUUID(),
@@ -41,12 +41,32 @@ export default function ManualEntryPage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  const [accounts, setAccounts] = useState<Account[]>([]);
+  const [accountsLoading, setAccountsLoading] = useState(true);
 
   const totals = useMemo(() => {
     const debit = entries.reduce((sum, row) => sum + (Number.isNaN(toNumber(row.debit)) ? 0 : toNumber(row.debit)), 0);
     const credit = entries.reduce((sum, row) => sum + (Number.isNaN(toNumber(row.credit)) ? 0 : toNumber(row.credit)), 0);
     return { debit, credit, difference: Math.abs(debit - credit) };
   }, [entries]);
+
+  useEffect(() => {
+    const loadAccounts = async () => {
+      const organizationId = window.sessionStorage.getItem("activeOrganizationId");
+      if (!organizationId) { setAccountsLoading(false); return; }
+      const { data, error } = await getSupabaseBrowserClient().from("accounts").select("id,code,name").eq("organization_id", organizationId).order("code").limit(5000);
+      if (!error) setAccounts((data ?? []) as Account[]);
+      setAccountsLoading(false);
+    };
+    void loadAccounts();
+  }, []);
+
+  const chooseAccount = (id: string, accountId: string) => {
+    const account = accounts.find((item) => item.id === accountId);
+    if (!account) return;
+    setEntries((current) => current.map((row) => row.id === id ? { ...row, account_code: account.code, account_name: account.name } : row));
+    setError(""); setSuccess("");
+  };
 
   const update = (id: string, key: keyof Entry, value: string) => {
     setEntries((current) => current.map((row) => row.id === id ? { ...row, [key]: value } : row));
@@ -67,6 +87,7 @@ export default function ManualEntryPage() {
       if (!row.description.trim()) issues.push(`السطر ${line}: بيان القيد مفقود`);
       if (!row.account_code.trim()) issues.push(`السطر ${line}: رقم الحساب مفقود`);
       if (!row.account_name.trim()) issues.push(`السطر ${line}: اسم الحساب مفقود`);
+      if (!accounts.some((account) => account.code === row.account_code.trim() && account.name === row.account_name.trim())) issues.push(`السطر ${line}: اختر حسابًا من دليل الحسابات`);
       const debit = toNumber(row.debit);
       const credit = toNumber(row.credit);
       if (Number.isNaN(debit) || Number.isNaN(credit)) issues.push(`السطر ${line}: المدين أو الدائن غير صالح`);
@@ -139,7 +160,7 @@ export default function ManualEntryPage() {
 
       <section className="mx-auto max-w-[1500px] px-4 py-4 sm:px-6">
         <div className="mb-3 flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 pb-3">
-          <p className="text-xs text-slate-500">أدخل سطور القيد ثم احفظه بعد التحقق من التوازن</p>
+          <p className="text-xs text-slate-500">أنشئ القيد من دليل الحسابات ثم احفظه بعد التحقق من التوازن</p>
           <div className="flex items-center gap-4 text-xs font-semibold">
             <span>مدين {totals.debit.toFixed(2)}</span>
             <span>دائن {totals.credit.toFixed(2)}</span>
@@ -169,17 +190,12 @@ export default function ManualEntryPage() {
               {entries.map((row, index) => (
                 <tr key={row.id} className="border-b border-slate-100 last:border-0">
                   <td className="px-2 py-2 text-center text-slate-400">{index + 1}</td>
-                  {(["date", "journal_no", "description", "account_code", "account_name", "debit", "credit"] as const).map((key) => (
-                    <td key={key} className="px-2 py-2">
-                      <input
-                        type={key === "date" ? "date" : key === "debit" || key === "credit" ? "text" : "text"}
-                        inputMode={key === "debit" || key === "credit" ? "decimal" : undefined}
-                        value={row[key]}
-                        onChange={(event) => update(row.id, key, event.target.value)}
-                        className="h-9 w-full rounded border border-slate-300 bg-white px-2 text-xs text-slate-900 outline-none focus:border-slate-700"
-                      />
-                    </td>
-                  ))}
+                  <td className="px-2 py-2"><input type="date" value={row.date} onChange={(e)=>update(row.id,"date",e.target.value)} className="h-9 w-full rounded border border-slate-300 px-2 text-xs outline-none focus:border-slate-700"/></td>
+                  <td className="px-2 py-2"><input value={row.journal_no} onChange={(e)=>update(row.id,"journal_no",e.target.value)} className="h-9 w-full rounded border border-slate-300 px-2 text-xs outline-none focus:border-slate-700"/></td>
+                  <td className="px-2 py-2"><input value={row.description} onChange={(e)=>update(row.id,"description",e.target.value)} className="h-9 w-full rounded border border-slate-300 px-2 text-xs outline-none focus:border-slate-700"/></td>
+                  <td className="px-2 py-2"><select value={accounts.find(a=>a.code===row.account_code && a.name===row.account_name)?.id ?? ""} onChange={(e)=>chooseAccount(row.id,e.target.value)} disabled={accountsLoading} className="h-9 w-full rounded border border-slate-300 bg-white px-2 text-xs outline-none focus:border-slate-700"><option value="">{accountsLoading ? "جارٍ تحميل الحسابات…" : "اختر الحساب"}</option>{accounts.map(a=><option key={a.id} value={a.id}>{a.code} — {a.name}</option>)}</select></td>
+                  <td className="px-2 py-2"><input value={row.debit} onChange={(e)=>update(row.id,"debit",e.target.value)} inputMode="decimal" className="h-9 w-full rounded border border-slate-300 px-2 text-xs outline-none focus:border-slate-700"/></td>
+                  <td className="px-2 py-2"><input value={row.credit} onChange={(e)=>update(row.id,"credit",e.target.value)} inputMode="decimal" className="h-9 w-full rounded border border-slate-300 px-2 text-xs outline-none focus:border-slate-700"/></td>
                   <td className="px-2 py-2 text-center">
                     <button type="button" onClick={() => removeRow(row.id)} disabled={entries.length === 1} className="text-xs font-semibold text-slate-400 hover:text-red-600 disabled:opacity-30">حذف</button>
                   </td>
