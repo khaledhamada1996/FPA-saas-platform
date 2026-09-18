@@ -11,6 +11,7 @@ type Entry = {
   description: string;
   account_code: string;
   account_name: string;
+  account_id: string;
   debit: string;
   credit: string;
 };
@@ -24,6 +25,7 @@ const blank = (): Entry => ({
   description: "",
   account_code: "",
   account_name: "",
+  account_id: "",
   debit: "",
   credit: "",
 });
@@ -64,7 +66,7 @@ export default function ManualEntryPage() {
   const chooseAccount = (id: string, accountId: string) => {
     const account = accounts.find((item) => item.id === accountId);
     if (!account) return;
-    setEntries((current) => current.map((row) => row.id === id ? { ...row, account_code: account.code, account_name: account.name } : row));
+    setEntries((current) => current.map((row) => row.id === id ? { ...row, account_code: account.code, account_name: account.name, account_id: account.id } : row));
     setError(""); setSuccess("");
   };
 
@@ -87,7 +89,7 @@ export default function ManualEntryPage() {
       if (!row.description.trim()) issues.push(`السطر ${line}: بيان القيد مفقود`);
       if (!row.account_code.trim()) issues.push(`السطر ${line}: رقم الحساب مفقود`);
       if (!row.account_name.trim()) issues.push(`السطر ${line}: اسم الحساب مفقود`);
-      if (!accounts.some((account) => account.code === row.account_code.trim() && account.name === row.account_name.trim())) issues.push(`السطر ${line}: اختر حسابًا من دليل الحسابات`);
+      if (!accounts.some((account) => account.id === row.account_id && account.code === row.account_code.trim() && account.name === row.account_name.trim())) issues.push(`السطر ${line}: اختر حسابًا من دليل الحسابات`);
       const debit = toNumber(row.debit);
       const credit = toNumber(row.credit);
       if (Number.isNaN(debit) || Number.isNaN(credit)) issues.push(`السطر ${line}: المدين أو الدائن غير صالح`);
@@ -125,15 +127,14 @@ export default function ManualEntryPage() {
         description: row.description.trim(),
         account_code: row.account_code.trim(),
         account_name: row.account_name.trim(),
+        account_id: row.account_id,
         debit: toNumber(row.debit),
         credit: toNumber(row.credit),
         line_no: index + 1,
       }));
-      const { data, error: rpcError } = await getSupabaseBrowserClient().rpc("ingest_validated_import", {
+      const { data, error: rpcError } = await getSupabaseBrowserClient().rpc("create_manual_journal_entry", {
         p_organization_id: organizationId,
-        p_file_name: `manual-entry-${journalNo || "journal"}.csv`,
-        p_file_hash: await crypto.subtle.digest("SHA-256", new TextEncoder().encode(JSON.stringify(payload))).then((buffer) => Array.from(new Uint8Array(buffer)).map((byte) => byte.toString(16).padStart(2, "0")).join("")),
-        p_rows: payload,
+        p_lines: payload,
       });
       if (rpcError) throw rpcError;
       if (!data) throw new Error("لم يتم إنشاء سجل الإدخال");
