@@ -52,7 +52,14 @@ export default function ImportHistoryPage() {
       if (!data) throw new Error("تعذر إنشاء نسخة قابلة للتعديل");
       router.push("/workspace/data/" + data);
     } catch (reopenError) {
-      setError(reopenError instanceof Error ? reopenError.message : "تعذر إعادة فتح الاستيراد للتعديل");
+      const rpcError =
+        typeof reopenError === "object" &&
+        reopenError !== null &&
+        "message" in reopenError &&
+        typeof (reopenError as { message?: unknown }).message === "string"
+          ? (reopenError as { message: string }).message
+          : null;
+      setError(rpcError || (reopenError instanceof Error ? reopenError.message : "تعذر إعادة فتح الاستيراد للتعديل"));
     } finally {
       setReopening(null);
     }
