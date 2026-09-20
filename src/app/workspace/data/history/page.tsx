@@ -201,12 +201,23 @@ export default function ImportHistoryPage() {
                     {new Date(item.created_at).toLocaleString("ar-SA")}
                   </td>
                   <td className="p-4">
-                    <Link
-                      href={`/workspace/data/${item.id}`}
-                      className="rounded-lg bg-slate-950 px-4 py-2 text-xs font-bold text-white"
-                    >
-                      فتح المراجعة
-                    </Link>
+                    {item.status === "rolled_back" && item.input_type === "actual_journal_transactions" ? (
+                      <button
+                        type="button"
+                        onClick={() => reopen(item.id)}
+                        disabled={reopening === item.id}
+                        className="rounded-lg bg-slate-950 px-4 py-2 text-xs font-bold text-white disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        {reopening === item.id ? "جارٍ إعادة الفتح…" : "إعادة فتح للتعديل"}
+                      </button>
+                    ) : (
+                      <Link
+                        href={`/workspace/data/${item.id}`}
+                        className="rounded-lg bg-slate-950 px-4 py-2 text-xs font-bold text-white"
+                      >
+                        فتح المراجعة
+                      </Link>
+                    )}
                   </td>
                 </tr>
               ))}
