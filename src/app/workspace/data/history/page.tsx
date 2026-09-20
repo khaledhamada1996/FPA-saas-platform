@@ -40,6 +40,23 @@ const statuses: Record<string, string> = {
 
 export default function ImportHistoryPage() {
   const router = useRouter();
+  const [reopening, setReopening] = useState<string | null>(null);
+
+  const reopen = async (importId: string) => {
+    setError("");
+    setReopening(importId);
+    try {
+      const supabase = getSupabaseBrowserClient();
+      const { data, error: reopenError } = await supabase.rpc("reopen_rolled_back_import_for_edit", { p_import_id: importId });
+      if (reopenError) throw reopenError;
+      if (!data) throw new Error("تعذر إنشاء نسخة قابلة للتعديل");
+      router.push("/workspace/data/" + data);
+    } catch (reopenError) {
+      setError(reopenError instanceof Error ? reopenError.message : "تعذر إعادة فتح الاستيراد للتعديل");
+    } finally {
+      setReopening(null);
+    }
+  };
   const [items, setItems] = useState<ImportItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
