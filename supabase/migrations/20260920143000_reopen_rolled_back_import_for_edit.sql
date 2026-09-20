@@ -18,7 +18,7 @@ begin
   from public.imports i where i.id=p_import_id for update;
 
   if v_org is null then raise exception 'Import not found'; end if;
-  if not public.has_org_permission(v_org,'import.prepare') then
+  if not (public.has_org_permission(v_org,'import.prepare') or public.has_org_permission(v_org,'import')) then
     raise exception 'Import preparation permission required';
   end if;
   if v_status <> 'rolled_back' then
