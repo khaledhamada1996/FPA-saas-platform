@@ -95,7 +95,7 @@ begin
     v_new,
     organization_id,
     row_number,
-    source_key,
+    v_new::text || ':' || source_key,
     payload,
     'pending',
     null
@@ -119,7 +119,8 @@ begin
       'source_import_id', p_import_id,
       'source_status', 'rolled_back',
       'source_row_count', v_rows,
-      'source_preserved', true
+      'source_preserved', true,
+      'source_key_rebased', true
     )
   );
 
