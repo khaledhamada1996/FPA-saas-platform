@@ -52,7 +52,7 @@ export default function FinancialWorkflow() {
         <div className="flex min-w-[860px] items-start">
           {steps.map((step, index) => {
             const isCurrent = step.key === current;
-            const isPast = index < currentIndex;
+            const isPast = false;
             return (
               <div key={step.key} className="flex min-w-0 flex-1 items-start">
                 <Link href={step.href} className="group flex min-w-0 flex-1 flex-col items-center text-center">
@@ -63,7 +63,7 @@ export default function FinancialWorkflow() {
                         ? "border-emerald-200 bg-emerald-50 text-emerald-700"
                         : "border-slate-200 bg-white text-slate-400 group-hover:border-slate-300 group-hover:text-slate-700"
                   }`}>
-                    {isPast ? "✓" : step.icon}
+                    {step.icon}
                   </span>
                   <span className={`mt-2 text-[11px] font-extrabold ${
                     isCurrent ? "text-blue-700" : "text-slate-700"
