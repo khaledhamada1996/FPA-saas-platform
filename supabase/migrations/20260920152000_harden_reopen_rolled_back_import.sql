@@ -97,8 +97,8 @@ begin
     row_number,
     v_new::text || ':' || source_key,
     payload,
-    'pending',
-    null
+    validation_status,
+    validation_message
   from public.import_rows
   where import_id = p_import_id
     and organization_id = v_org
@@ -120,7 +120,8 @@ begin
       'source_status', 'rolled_back',
       'source_row_count', v_rows,
       'source_preserved', true,
-      'source_key_rebased', true
+      'source_key_rebased', true,
+      'validation_state_preserved', true
     )
   );
 
