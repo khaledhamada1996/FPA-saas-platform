@@ -6,6 +6,7 @@ const sections=[
  {title:"إدخال البيانات",subtitle:"أدخل قيدًا يدويًا أو ارفع ملف القيود. بعد التحقق ينتقل المصدر إلى المراجعة ثم النشر.",href:"/workspace/data/import",action:"بدء إدخال البيانات",permission:"screen.data.view"},
  {title:"قيود اليومية",subtitle:"ابحث في القيود المنشورة، افتح تفاصيل أي قيد، وعدّل القيد المنشور بإصدار جديد مع حفظ الأثر.",href:"/workspace/data/journals",action:"فتح القيود",permission:"screen.actuals.view"},
  {title:"دليل الحسابات والأرصدة الافتتاحية",subtitle:"جهّز الأساس المحاسبي للشركة قبل الحركة: الحسابات والأرصدة الافتتاحية.",href:"/workspace/data/accounts",action:"إدارة الأساس المحاسبي",permission:"screen.accounts.view"},
+ {title:"البيانات المرجعية والأبعاد",subtitle:"أنشئ أو استورد الكيانات والفروع والأقسام ومراكز التكلفة والمناطق والمنتجات والمشروعات قبل مطابقة الاستيرادات.",href:"/workspace/data/master-data",action:"إدارة البيانات المرجعية",permission:"screen.data.view"},
  {title:"ميزان المراجعة",subtitle:"تحقق من أرصدة الحسابات والحركة والافتتاح والإغلاق بعد اعتماد البيانات.",href:"/workspace/trial-balance",action:"فتح الميزان",permission:"screen.trial_balance.view"}
 ];
 export default function FinancialDataHub(){
