@@ -19,4 +19,5 @@ export default function WorkspacePage(){
   <section className="border border-slate-200 bg-white p-5 sm:p-6"><p className="eyebrow">NEXT ACTION</p><h2 className="mt-1 text-lg font-extrabold text-slate-950">ابدأ من البيانات المالية</h2><p className="mt-2 max-w-2xl text-sm leading-7 text-slate-500">أدخل أو استورد البيانات، ثم راجعها واعتمدها. بعد النشر تنتقل نفس البيانات تلقائيًا إلى الميزان والقوائم والتحليل والتخطيط.</p><div className="mt-5 flex flex-wrap gap-3"><Link href="/workspace/data" className="bg-blue-600 px-5 py-3 text-xs font-bold text-white hover:bg-blue-700">فتح مركز البيانات ←</Link><Link href="/workspace/data/journals" className="border border-slate-300 bg-white px-5 py-3 text-xs font-bold text-slate-700 hover:bg-slate-50">قيود اليومية</Link></div></section>
   <section className="border border-slate-200 bg-white p-5 sm:p-6"><p className="eyebrow">MANAGEMENT</p><h2 className="mt-1 text-lg font-extrabold text-slate-950">لوحة الإدارة</h2><p className="mt-2 text-sm leading-6 text-slate-500">الصورة التنفيذية تأتي بعد اعتماد البيانات والتحليل.</p><Link href="/workspace/executive-dashboard" className="mt-5 inline-flex text-xs font-bold text-slate-700 underline decoration-slate-300 underline-offset-4">فتح لوحة الإدارة ←</Link></section>
  </div>
- </div></section>\n}
+ </div></section>
+}
