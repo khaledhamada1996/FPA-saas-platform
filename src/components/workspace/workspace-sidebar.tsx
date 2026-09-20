@@ -13,6 +13,7 @@ const navigation:NavSection=[
  ["الإدارة",[["screen.executive_dashboard.view","لوحة الإدارة","/workspace/executive-dashboard","▦"]]],
  ["الدورة المالية",[
    ["screen.data.view","البيانات المالية","/workspace/data","◈"],
+   ["screen.data.view","سجل الاستيرادات","/workspace/data/history","↶"],
    ["screen.budget.view","التخطيط المالي","/workspace/planning","□"],
    ["screen.financial_analysis.view","التحليل المالي","/workspace/analysis","◒"],
    ["screen.financial_statements.view","القوائم والتقارير","/workspace/financial-statements","▤"]
