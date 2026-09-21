@@ -4,8 +4,8 @@ import Link from "next/link";
 
 const sources = [
   {title:"القيود اليومية",tag:"متاح الآن",description:"إذا كانت لديك حركة الحسابات بالتفصيل مدين ودائن، فهذا هو المسار المناسب.",href:"/workspace/data/import",action:"رفع القيود",active:true,icon:"↳"},
-  {title:"ميزان المراجعة",tag:"مسار مستقل",description:"إذا كان لديك رصيد افتتاحي وحركة وإغلاق لكل حساب حسب الفترة، سنعتمد مسار TB مخصصًا.",href:"/workspace/trial-balance",action:"فتح ميزان المراجعة",active:true,icon:"∑"},
-  {title:"القوائم المالية",tag:"مسار مستقل",description:"إذا كانت بياناتك تبدأ من القوائم، فالمسار مخصص للتحليل والتنبؤ دون إجبارك على إدخال القيود.",href:"/workspace/financial-statements",action:"فتح القوائم",active:true,icon:"▤"},
+  {title:"ميزان المراجعة",tag:"مسار مستقل",description:"إذا كان لديك رصيد افتتاحي وحركة وإغلاق لكل حساب حسب الفترة، سنعتمد مسار TB مخصصًا.",href:"/workspace/trial-balance",action:"فتح ميزان المراجعة",active:false,icon:"∑"},
+  {title:"القوائم المالية",tag:"مسار مستقل",description:"إذا كانت بياناتك تبدأ من القوائم، فالمسار مخصص للتحليل والتنبؤ دون إجبارك على إدخال القيود.",href:"/workspace/financial-statements",action:"فتح القوائم",active:false,icon:"▤"},
   {title:"نظام محاسبي",tag:"تكاملات",description:"اربط مصدرًا خارجيًا عندما تكون بياناتك موجودة في نظام محاسبي أو منصة تشغيلية مدعومة.",href:"/workspace/integrations",action:"عرض التكاملات",active:true,icon:"⇄"},
 ];
 
@@ -21,13 +21,13 @@ export default function AddFinancialDataPage(){
     </header>
     <section className="mx-auto max-w-[1200px] px-4 py-7 sm:px-6 lg:px-8">
       <div className="grid gap-4 md:grid-cols-2">
-        {sources.map((item,index)=><article key={item.title} className="border border-slate-200 bg-white p-5 transition hover:border-slate-400 sm:p-6">
+        {sources.map((item,index)=><article key={item.title} className={`border border-slate-200 bg-white p-5 sm:p-6 ${item.active?"transition hover:border-slate-400":"opacity-75"}`}>
           <div className="flex gap-4">
             <div className="flex h-11 w-11 shrink-0 items-center justify-center border border-slate-200 bg-slate-50 text-lg font-bold text-slate-700">{item.icon}</div>
             <div className="min-w-0 flex-1">
               <div className="flex items-start justify-between gap-3"><div><p className="text-[10px] font-bold text-slate-400">0{index+1}</p><h2 className="mt-1 text-base font-extrabold text-slate-950">{item.title}</h2></div><span className="text-[10px] font-bold text-slate-500">{item.tag}</span></div>
               <p className="mt-3 text-sm leading-6 text-slate-500">{item.description}</p>
-              <div className="mt-5"><Link href={item.href} className="inline-flex bg-slate-950 px-4 py-2.5 text-xs font-bold text-white hover:bg-slate-800">{item.action} ←</Link></div>
+              <div className="mt-5">{item.active?<Link href={item.href} className="inline-flex bg-slate-950 px-4 py-2.5 text-xs font-bold text-white hover:bg-slate-800">{item.action} ←</Link>:<span className="inline-flex border border-slate-200 bg-slate-50 px-4 py-2.5 text-xs font-bold text-slate-400">قريبًا</span>}</div>
             </div>
           </div>
         </article>)}
