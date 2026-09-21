@@ -10,7 +10,7 @@ type NavSection=readonly [string,readonly NavItem[]][];
 
 const navigation:NavSection=[
  ["مساحة العمل",[["workspace.home.view","الرئيسية","/workspace","⌂"]]],
- ["الإدارة",[["screen.executive_dashboard.view","لوحة الإدارة","/workspace/executive-dashboard","▦"]]],
+ ["الإدارة",[["screen.executive_dashboard.view","لوحة الإدارة","/workspace/executive-dashboard","▦"],["screen.connector_management.view","تكامل الأنظمة","/workspace/integrations","⇄"],["screen.data_monitoring.view","مراقبة البيانات","/workspace/data-monitoring","◌"]]],
  ["الدورة المالية",[
    ["screen.data.view","البيانات المالية","/workspace/data","◈"],
    ["screen.data.view","سجل الاستيرادات","/workspace/data/history","↶"],
