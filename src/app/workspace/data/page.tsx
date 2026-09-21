@@ -3,7 +3,7 @@ import Link from "next/link";
 import { useEffect,useState } from "react";
 type Access={permission_key?:string;granted?:boolean};
 const sections=[
- {title:"البيانات الفعلية",subtitle:"ابدأ من البيانات التي تملكها اليوم، ثم جهّزها للتحقق والاعتماد.",icon:"↳",items:[{label:"رفع القيود",href:"/workspace/data/import",primary:true},{label:"قيد يدوي",href:"/workspace/data/manual"}],permission:"screen.data.view"},
+ {title:"البيانات الفعلية",subtitle:"ابدأ من البيانات التي تملكها اليوم، ثم جهّزها للتحقق والاعتماد.",icon:"↳",items:[{label:"اختيار مصدر البيانات",href:"/workspace/data/add",primary:true}],permission:"screen.data.view"},
  {title:"سجل الاستيرادات",subtitle:"تابع الملفات، افتح المراجعة، واستأنف العمليات غير المكتملة.",icon:"▤",items:[{label:"فتح السجل",href:"/workspace/data/history",primary:true}],permission:"screen.data.view"},
  {title:"قيود اليومية",subtitle:"راجع القيود الفعلية المنشورة وافتح تفاصيلها عند الحاجة.",icon:"≡",items:[{label:"فتح القيود",href:"/workspace/data/journals",primary:true}],permission:"screen.actuals.view"},
  {title:"الأساس المحاسبي",subtitle:"دليل الحسابات والأرصدة الافتتاحية التي تعتمد عليها البيانات المالية.",icon:"⌁",items:[{label:"إدارة الأساس المحاسبي",href:"/workspace/data/accounts",primary:true}],permission:"screen.accounts.view"},
