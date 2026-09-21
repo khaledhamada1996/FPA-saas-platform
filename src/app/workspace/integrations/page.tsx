@@ -6,6 +6,7 @@ import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 
 type Connector={id:string;connector_key:string;display_name:string;category:string;supported_source_type:string;auth_type:string;capabilities:Record<string,unknown>;supported_entities:string[];status:string};
 type State={id:string;data_source_id:string;connector_id:string;connector_key:string;enabled:boolean;has_credential:boolean;sync_mode:string;source_status:string;last_success_at:string|null;last_error_at:string|null;last_error_message:string|null};
+type Reconciliation={status:"passed"|"failed"|"blocked"|"not_run";difference_minor:number;blocking_reason?:string|null};
 
 const providerMeta:Record<string,{title:string;description:string;stage:string;logo:string}>={
   qoyod:{title:"قيود",logo:"https://www.qoyod.com/favicon.ico",description:"سحب الحسابات والقيود اليومية إلى طبقة البيانات المحلية للمنصة.",stage:"قابل للتفعيل الآن"},
@@ -38,7 +39,7 @@ export default function IntegrationsPage(){
  const [notice,setNotice]=useState("");
  const [error,setError]=useState("");
  const [canManage,setCanManage]=useState(false);
- const [review,setReview]=useState<any|null>(null);
+ const [review,setReview]=useState<any|null>(null);\n const [reconciliation,setReconciliation]=useState<Reconciliation>({status:"not_run",difference_minor:0});
 
  async function load(){
    setLoading(true);setError("");
@@ -69,7 +70,7 @@ export default function IntegrationsPage(){
  const isQoyod=selected==="qoyod";
  const isSmartLife=selected==="smart_life";
 
- async function refreshReview(dataSourceId:string,syncRunId?:string|null){ const {data,error:e}=await supabase.rpc("get_integration_review_summary",{p_data_source_id:dataSourceId,p_sync_run_id:syncRunId??null}); if(e){setError(e.message);return} setReview(data??null); }
+ async function refreshReview(dataSourceId:string,syncRunId?:string|null){ const {data,error:e}=await supabase.rpc("get_integration_review_summary",{p_data_source_id:dataSourceId,p_sync_run_id:syncRunId??null}); if(e){setError(e.message);return} setReview(data??null); if(syncRunId){ const {data:rec,error:re}=await supabase.from("integration_reconciliations").select("status,difference_minor,blocking_reason").eq("data_source_id",dataSourceId).eq("sync_run_id",syncRunId).maybeSingle(); if(!re)setReconciliation((rec??{status:"not_run",difference_minor:0}) as Reconciliation); } }
 
  async function connect(){
    const org=sessionStorage.getItem("activeOrganizationId");
@@ -126,7 +127,7 @@ export default function IntegrationsPage(){
      if(normalized.data?.error){setError(`تم سحب البيانات، لكن تعذر تشغيل طبقة التطبيع: ${String(normalized.data.error)}`);setBusy("");return}
      const mapped=await supabase.rpc("apply_integration_account_mappings",{p_data_source_id:currentState.data_source_id,p_sync_run_id:data.run_id,p_mapping_version:"v1"}); if(mapped.error){setError(`تم التطبيع، لكن تعذر تطبيق مطابقة الحسابات: ${mapped.error.message}`);setBusy("");return}
      const dimensions=await supabase.rpc("apply_integration_dimension_mappings",{p_data_source_id:currentState.data_source_id,p_sync_run_id:data.run_id}); if(dimensions.error){setError(`تمت مطابقة الحسابات، لكن تعذر تطبيق مطابقة الأبعاد: ${dimensions.error.message}`);setBusy("");return}
-     await refreshReview(currentState.data_source_id,data.run_id);
+     await supabase.rpc("reconcile_integration",{p_data_source_id:currentState.data_source_id,p_sync_run_id:data.run_id});\n     await refreshReview(currentState.data_source_id,data.run_id);
      setNotice(`اكتملت المزامنة: ${data.accepted??0} سجل خام، ثم التطبيع والمطابقة. راجع لوحة الحالة قبل المصالحة.`);
    }else{
      setNotice("تم اختبار الاتصال بنجاح دون تعديل النظام الخارجي.");
@@ -167,7 +168,7 @@ export default function IntegrationsPage(){
        {currentState?.last_error_message&&<div className="mt-5 border border-slate-300 bg-white p-3 text-xs leading-5 text-red-700">{currentState.last_error_message}</div>}
       </aside>
     </section>}
-    {currentState&&review&&<section className="mt-5 border border-slate-200 bg-white p-5 sm:p-6"><div className="flex items-center justify-between border-b border-slate-100 pb-4"><div><p className="text-[10px] font-bold tracking-[0.14em] text-slate-400">INTEGRATION REVIEW</p><h2 className="mt-1 text-lg font-bold">حالة دورة البيانات</h2></div><button type="button" disabled={!!busy} onClick={()=>void refreshReview(currentState.data_source_id,review.sync_run_id)} className="border border-slate-300 bg-slate-100 px-4 py-2 text-xs font-bold">تحديث</button></div><div className="mt-5 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">{[["إجمالي السجلات",review.total],["تم التطبيع",review.normalized],["مطابقة الحسابات",review.account_mapped],["مطابقة الأبعاد",review.dimension_mapped],["حسابات تحتاج مراجعة",review.account_needs_review],["أبعاد تحتاج مراجعة",review.dimension_needs_review],["مرفوض",review.rejected],["جاهز للمصالحة",review.ready_for_reconciliation]].map(([label,value],i)=><div key={String(label)} className="border border-slate-200 p-3"><p className="text-[11px] text-slate-500">{String(label)}</p><p className="mt-1 text-xl font-bold">{String(value)}</p></div>)}</div><div className="mt-5 border-t border-slate-100 pt-4 text-xs font-semibold text-slate-600">خام → تطبيع → مطابقة الحسابات → مطابقة الأبعاد → مراجعة → مصالحة → نشر</div></section>}
+    {currentState&&review&&<section className="mt-5 border border-slate-200 bg-white p-5 sm:p-6"><div className="flex items-center justify-between border-b border-slate-100 pb-4"><div><p className="text-[10px] font-bold tracking-[0.14em] text-slate-400">INTEGRATION REVIEW</p><h2 className="mt-1 text-lg font-bold">حالة دورة البيانات</h2></div><button type="button" disabled={!!busy} onClick={()=>void refreshReview(currentState.data_source_id,review.sync_run_id)} className="border border-slate-300 bg-slate-100 px-4 py-2 text-xs font-bold">تحديث</button></div><div className="mt-5 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">{[["إجمالي السجلات",review.total],["تم التطبيع",review.normalized],["مطابقة الحسابات",review.account_mapped],["مطابقة الأبعاد",review.dimension_mapped],["حسابات تحتاج مراجعة",review.account_needs_review],["أبعاد تحتاج مراجعة",review.dimension_needs_review],["مرفوض",review.rejected],["جاهز للمصالحة",review.ready_for_reconciliation]].map(([label,value],i)=><div key={String(label)} className="border border-slate-200 p-3"><p className="text-[11px] text-slate-500">{String(label)}</p><p className="mt-1 text-xl font-bold">{String(value)}</p></div>)}</div><div className="mt-5 grid gap-3 border-t border-slate-100 pt-4 sm:grid-cols-2"><div className="text-xs font-semibold text-slate-600">المسار: خام → تطبيع → مطابقة الحسابات → مطابقة الأبعاد → مراجعة → مصالحة → نشر</div><div className="border border-slate-200 bg-slate-50 p-3 text-xs"><span className="text-slate-500">المصالحة: </span><b>{reconciliation.status==="passed"?"ناجحة":reconciliation.status==="blocked"?"متوقفة بسبب سجلات غير مكتملة":reconciliation.status==="failed"?"فشلت":"لم تُنفذ"}</b>{reconciliation.difference_minor!==0&&<span className="mr-2 text-red-700">الفرق: {reconciliation.difference_minor}</span>}{reconciliation.blocking_reason&&<p className="mt-1 text-slate-500">{reconciliation.blocking_reason}</p>}</div></div></section>}
    </>}
   </section>
  </main>
