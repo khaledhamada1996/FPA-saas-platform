@@ -88,7 +88,7 @@ export default function IntegrationsPage(){
      }
      if(isSmartLife){
        if(!smartBaseUrl.trim()||!smartCompany.trim()||!smartUsername.trim()||!smartPassword.trim()) throw new Error("أكمل عنوان API واسم الشركة واسم المستخدم وكلمة المرور");
-       const credential=JSON.stringify({base_url:smartBaseUrl.trim().replace(/\\/$/, ""),company:smartCompany.trim(),username:smartUsername.trim(),password:smartPassword});
+       const credential=JSON.stringify({base_url:smartBaseUrl.trim().replace(/\/$/, ""),company:smartCompany.trim(),username:smartUsername.trim(),password:smartPassword});
        const {error:se}=await supabase.rpc("save_connector_secret",{p_organization_id:org,p_connector_id:current.id,p_secret:credential});
        if(se)throw se;
        setSmartPassword("");
