@@ -53,8 +53,9 @@ export default function IntegrationsPage(){
    ]);
    const first=ce||se||ae||lee;if(first){setError(first.message);setLoading(false);return}
    setCatalog((cat??[]) as Connector[]);
-   setLegalEntities((le??[]) as {id:string;name:string;code?:string|null}[]);
-   setLegalEntityId((le?.[0]?.id??"") as string);
+   const entities=(le??[]) as {id:string;name:string;code?:string|null}[];
+   setLegalEntities(entities);
+   setLegalEntityId(entities[0]?.id??"");
    setStates((st??[]) as State[]);
    setCanManage((access??[]).some((x:{permission_key?:string;granted?:boolean})=>x.permission_key==="connector.manage"&&x.granted===true));
    setLoading(false);
