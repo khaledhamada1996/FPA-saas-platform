@@ -39,7 +39,8 @@ export default function IntegrationsPage(){
  const [notice,setNotice]=useState("");
  const [error,setError]=useState("");
  const [canManage,setCanManage]=useState(false);
- const [review,setReview]=useState<any|null>(null);\n const [reconciliation,setReconciliation]=useState<Reconciliation>({status:"not_run",difference_minor:0});
+ const [review,setReview]=useState<any|null>(null);
+ const [reconciliation,setReconciliation]=useState<Reconciliation>({status:"not_run",difference_minor:0});
 
  async function load(){
    setLoading(true);setError("");
@@ -127,7 +128,8 @@ export default function IntegrationsPage(){
      if(normalized.data?.error){setError(`تم سحب البيانات، لكن تعذر تشغيل طبقة التطبيع: ${String(normalized.data.error)}`);setBusy("");return}
      const mapped=await supabase.rpc("apply_integration_account_mappings",{p_data_source_id:currentState.data_source_id,p_sync_run_id:data.run_id,p_mapping_version:"v1"}); if(mapped.error){setError(`تم التطبيع، لكن تعذر تطبيق مطابقة الحسابات: ${mapped.error.message}`);setBusy("");return}
      const dimensions=await supabase.rpc("apply_integration_dimension_mappings",{p_data_source_id:currentState.data_source_id,p_sync_run_id:data.run_id}); if(dimensions.error){setError(`تمت مطابقة الحسابات، لكن تعذر تطبيق مطابقة الأبعاد: ${dimensions.error.message}`);setBusy("");return}
-     await supabase.rpc("reconcile_integration",{p_data_source_id:currentState.data_source_id,p_sync_run_id:data.run_id});\n     await refreshReview(currentState.data_source_id,data.run_id);
+     await supabase.rpc("reconcile_integration",{p_data_source_id:currentState.data_source_id,p_sync_run_id:data.run_id});
+     await refreshReview(currentState.data_source_id,data.run_id);
      setNotice(`اكتملت المزامنة: ${data.accepted??0} سجل خام، ثم التطبيع والمطابقة. راجع لوحة الحالة قبل المصالحة.`);
    }else{
      setNotice("تم اختبار الاتصال بنجاح دون تعديل النظام الخارجي.");
