@@ -22,6 +22,8 @@ function fmt(v:string|null){return v?new Intl.DateTimeFormat("ar-SA",{dateStyle:
 export default function IntegrationsPage(){
  const supabase=getSupabaseBrowserClient();
  const [catalog,setCatalog]=useState<Connector[]>([]);
+ const [legalEntities,setLegalEntities]=useState<{id:string;name:string;code?:string|null}[]>([]);
+ const [legalEntityId,setLegalEntityId]=useState("");
  const [states,setStates]=useState<State[]>([]);
  const [selected,setSelected]=useState("qoyod");
  const [apiKey,setApiKey]=useState("");
@@ -46,10 +48,13 @@ export default function IntegrationsPage(){
    const [{data:cat,error:ce},{data:st,error:se},{data:access,error:ae}]=await Promise.all([
      supabase.rpc("get_connector_catalog",{p_organization_id:org}),
      supabase.rpc("get_connector_connection_state",{p_organization_id:org}),
-     supabase.rpc("get_my_org_access",{p_organization_id:org})
+     supabase.rpc("get_my_org_access",{p_organization_id:org}),
+     supabase.from("legal_entities").select("id,name,code").eq("organization_id",org).order("name")
    ]);
-   const first=ce||se||ae;if(first){setError(first.message);setLoading(false);return}
+   const first=ce||se||ae||le?.error;if(first){setError(first.message);setLoading(false);return}
    setCatalog((cat??[]) as Connector[]);
+   setLegalEntities((le?.data??[]) as {id:string;name:string;code?:string|null}[]);
+   setLegalEntityId((le?.data?.[0]?.id??"") as string);
    setStates((st??[]) as State[]);
    setCanManage((access??[]).some((x:{permission_key?:string;granted?:boolean})=>x.permission_key==="connector.manage"&&x.granted===true));
    setLoading(false);
@@ -67,11 +72,12 @@ export default function IntegrationsPage(){
    setBusy("connect");setError("");setNotice("");
    try{
      let sourceId=currentState?.data_source_id;
+     if(!legalEntityId)throw new Error("اختر الشركة/الكيان القانوني أولًا");
      if(!sourceId){
        const {data,error:e}=await supabase.rpc("manage_data_source",{
          p_organization_id:org,p_data_source_id:null,p_action:"create",
          p_source_type:"api",p_system_name:companyName.trim()||providerMeta[selected].title,
-         p_connection_key:null,p_sync_mode:"near_real_time"
+         p_connection_key:null,p_sync_mode:"near_real_time",p_legal_entity_id:legalEntityId
        });
        if(e)throw e; sourceId=String(data);
        const {error:ae}=await supabase.rpc("attach_data_source_connector",{
@@ -79,6 +85,9 @@ export default function IntegrationsPage(){
          p_connection_ref:null,p_sync_config:{mode:"near_real_time",read_only:true}
        });
        if(ae)throw ae;
+     }else{
+       const {error:ue}=await supabase.rpc("manage_data_source",{p_organization_id:org,p_data_source_id:sourceId,p_action:"update",p_source_type:"api",p_system_name:companyName.trim()||providerMeta[selected].title,p_connection_key:null,p_sync_mode:"near_real_time",p_legal_entity_id:legalEntityId});
+       if(ue)throw ue;
      }
      if(isQoyod){
        if(!apiKey.trim())throw new Error("أدخل مفتاح API أولًا");
@@ -136,6 +145,8 @@ export default function IntegrationsPage(){
       <div className="border border-slate-200 bg-white p-5 sm:p-6">
        <div className="border-b border-slate-100 pb-5"><p className="text-[10px] font-bold tracking-[0.14em] text-slate-400">CONNECTION SETUP</p><h2 className="mt-1 text-xl font-bold text-[#292929]">إعداد {providerMeta[selected].title}</h2><p className="mt-2 text-sm leading-6 text-slate-500">{isQoyod?"أدخل مفتاح API الخاص بالمنشأة في قيود. لن يظهر المفتاح مرة أخرى بعد حفظه.":isSmartLife?"أدخل بيانات API الخاصة بحساب Smart Life. سيتم استخدامها لتسجيل الدخول إلى API وسحب البيانات فقط، ولن تُرسل أي عمليات تعديل إلى Smart Life.":"تم تجهيز طبقة الموصل وقاعدة البيانات لهذا النظام؛ تنفيذ الموصل التنفيذي يتم تباعًا بعد اعتماد مخطط المصادقة الخاص بالمزوّد."}</p></div>
        {(isQoyod||isSmartLife)?<div className="mt-6 max-w-2xl space-y-4">
+         <label className="block text-sm font-semibold">الشركة / الكيان القانوني<select value={legalEntityId} onChange={e=>setLegalEntityId(e.target.value)} className="mt-2 w-full border border-slate-300 bg-white px-3 py-3 text-sm outline-none focus:border-slate-500"><option value="">اختر الشركة</option>{legalEntities.map(le=><option key={le.id} value={le.id}>{le.name}{le.code?` — ${le.code}`:""}</option>)}</select></label>
+         {legalEntities.length===0&&<p className="text-xs leading-5 text-slate-500">لا توجد كيانات قانونية مسجلة لهذه المنظمة. أنشئ الشركة أولًا من إعدادات الشركة قبل ربط مصدر خارجي.</p>}
          <label className="block text-sm font-semibold">اسم المصدر<input value={companyName} onChange={e=>setCompanyName(e.target.value)} className="mt-2 w-full border border-slate-300 bg-white px-3 py-3 text-sm outline-none focus:border-slate-500" placeholder="مثال: قيود — الشركة الرئيسية"/></label>
          {isSmartLife&&<><label className="block text-sm font-semibold">عنوان API<input value={smartBaseUrl} onChange={e=>setSmartBaseUrl(e.target.value)} className="mt-2 w-full border border-slate-300 bg-white px-3 py-3 text-sm outline-none focus:border-slate-500" placeholder="https://.../api/v1.0"/></label><label className="block text-sm font-semibold">اسم الشركة في Smart Life<input value={smartCompany} onChange={e=>setSmartCompany(e.target.value)} className="mt-2 w-full border border-slate-300 bg-white px-3 py-3 text-sm outline-none focus:border-slate-500" placeholder="اسم الشركة / الشركة في API"/></label><label className="block text-sm font-semibold">اسم المستخدم<input value={smartUsername} onChange={e=>setSmartUsername(e.target.value)} className="mt-2 w-full border border-slate-300 bg-white px-3 py-3 text-sm outline-none focus:border-slate-500" placeholder="اسم مستخدم API"/></label><label className="block text-sm font-semibold">كلمة المرور<input type="password" autoComplete="new-password" value={smartPassword} onChange={e=>setSmartPassword(e.target.value)} className="mt-2 w-full border border-slate-300 bg-white px-3 py-3 text-sm outline-none focus:border-slate-500" placeholder="كلمة مرور API"/></label></>}{isQoyod&&<label className="block text-sm font-semibold">مفتاح API<input type="password" autoComplete="off" value={apiKey} onChange={e=>setApiKey(e.target.value)} className="mt-2 w-full border border-slate-300 bg-white px-3 py-3 text-sm outline-none focus:border-slate-500" placeholder="أدخل المفتاح هنا"/></label>}
          <div className="flex flex-wrap gap-2"><button disabled={!canManage||busy==="connect"} onClick={()=>void connect()} className="border border-slate-400 bg-slate-200 px-5 py-3 text-sm font-bold text-[#292929] disabled:opacity-50">{busy==="connect"?"جارٍ الحفظ…":"حفظ الاتصال"}</button>{currentState?.has_credential&&<><button disabled={!!busy} onClick={()=>void run("test")} className="border border-slate-400 bg-slate-100 px-5 py-3 text-sm font-bold text-[#292929] disabled:opacity-50">{busy==="test"?"جارٍ الاختبار…":"اختبار الاتصال"}</button><button disabled={!!busy} onClick={()=>void run("sync")} className="border border-slate-400 bg-slate-200 px-5 py-3 text-sm font-bold text-[#292929] disabled:opacity-50">{busy==="sync"?"جارٍ المزامنة…":"مزامنة الآن"}</button></>}</div>
