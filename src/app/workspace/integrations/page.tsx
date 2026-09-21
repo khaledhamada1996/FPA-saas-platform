@@ -7,14 +7,14 @@ import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 type Connector={id:string;connector_key:string;display_name:string;category:string;supported_source_type:string;auth_type:string;capabilities:Record<string,unknown>;supported_entities:string[];status:string};
 type State={id:string;data_source_id:string;connector_id:string;connector_key:string;enabled:boolean;has_credential:boolean;sync_mode:string;source_status:string;last_success_at:string|null;last_error_at:string|null;last_error_message:string|null};
 
-const providerMeta:Record<string,{title:string;description:string;stage:string}>={
-  qoyod:{title:"قيود",description:"سحب الحسابات والقيود اليومية إلى طبقة البيانات المحلية للمنصة.",stage:"قابل للتفعيل الآن"},
-  odoo:{title:"Odoo",description:"موصل محاسبي للبيانات المالية والحسابات والقيود.",stage:"طبقة الموصل جاهزة"},
-  zoho_books:{title:"Zoho Books",description:"موصل محاسبي للحسابات والقيود والفواتير والمدفوعات.",stage:"طبقة الموصل جاهزة"},
-  foodics:{title:"Foodics",description:"سحب المبيعات والمدفوعات والمنتجات والعملاء للتحليل المالي.",stage:"طبقة الموصل جاهزة"},
-  salla:{title:"Salla",description:"سحب الطلبات والمدفوعات والمنتجات والعملاء.",stage:"طبقة الموصل جاهزة"},
-  zid:{title:"Zid",description:"سحب الطلبات والمدفوعات والمنتجات والعملاء.",stage:"طبقة الموصل جاهزة"},
-  smart_life:{title:"Smart Life",description:"ربط قاعدة البيانات المحاسبية للمنشأة للقراءة والتحليل.",stage:"يحتاج إعداد الاتصال"},
+const providerMeta:Record<string,{title:string;description:string;stage:string;logo:string}>={
+  qoyod:{title:"قيود",logo:"https://www.qoyod.com/favicon.ico",description:"سحب الحسابات والقيود اليومية إلى طبقة البيانات المحلية للمنصة.",stage:"قابل للتفعيل الآن"},
+  odoo:{title:"Odoo",logo:"https://www.odoo.com/favicon.ico",description:"موصل محاسبي للبيانات المالية والحسابات والقيود.",stage:"طبقة الموصل جاهزة"},
+  zoho_books:{title:"Zoho Books",logo:"https://www.zoho.com/favicon.ico",description:"موصل محاسبي للحسابات والقيود والفواتير والمدفوعات.",stage:"طبقة الموصل جاهزة"},
+  foodics:{title:"Foodics",logo:"https://www.foodics.com/favicon.ico",description:"سحب المبيعات والمدفوعات والمنتجات والعملاء للتحليل المالي.",stage:"طبقة الموصل جاهزة"},
+  salla:{title:"Salla",logo:"https://salla.com/favicon.ico",description:"سحب الطلبات والمدفوعات والمنتجات والعملاء.",stage:"طبقة الموصل جاهزة"},
+  zid:{title:"Zid",logo:"https://zid.sa/favicon.ico",description:"سحب الطلبات والمدفوعات والمنتجات والعملاء.",stage:"طبقة الموصل جاهزة"},
+  smart_life:{title:"Smart Life",logo:"https://smarterp.top/favicon.ico",description:"ربط قاعدة البيانات المحاسبية للمنشأة للقراءة والتحليل.",stage:"يحتاج إعداد الاتصال"},
 };
 
 function fmt(v:string|null){return v?new Intl.DateTimeFormat("ar-SA",{dateStyle:"medium",timeStyle:"short"}).format(new Date(v)):"—"}
@@ -123,7 +123,7 @@ export default function IntegrationsPage(){
    {error&&<div className="mt-4 border border-slate-300 bg-slate-100 p-4 text-sm text-red-700">{error}</div>}
    {loading?<div className="mt-6 border border-slate-200 bg-white p-10 text-center text-sm text-slate-500">جارٍ تحميل التكاملات…</div>:<>
     <div className="mt-5 grid gap-2.5 sm:grid-cols-2 lg:grid-cols-3">
-     {providers.map(c=>{const m=providerMeta[c.connector_key];const s=states.find(x=>x.connector_id===c.id);return <button key={c.id} type="button" onClick={()=>setSelected(c.connector_key)} className={`group relative min-h-[104px] border px-3.5 py-3 text-right transition-all duration-200 ${selected===c.connector_key?"border-slate-400 bg-slate-50 shadow-sm":"border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50"}`}><div className="flex items-center justify-between gap-3"><div className="flex min-w-0 items-center gap-3"><span className={`flex h-9 w-9 shrink-0 items-center justify-center border text-xs font-black ${selected===c.connector_key?"border-slate-400 bg-white":"border-slate-200 bg-slate-50"}`}>{m.title.slice(0,1)}</span><div className="min-w-0"><h2 className="truncate text-sm font-bold text-[#292929]">{m.title}</h2><p className="mt-0.5 truncate text-[11px] text-slate-500">{m.description}</p></div></div><span className="shrink-0 text-[9px] font-bold text-slate-500">{s?.has_credential?"متصل":"غير متصل"}</span></div><div className="mt-3 flex items-center justify-between border-t border-slate-100 pt-2.5"><span className="text-[9px] font-bold text-slate-400">{m.stage}</span><span className="text-[10px] text-slate-400">›</span></div></button>})}
+     {providers.map(c=>{const m=providerMeta[c.connector_key];const s=states.find(x=>x.connector_id===c.id);return <button key={c.id} type="button" onClick={()=>setSelected(c.connector_key)} className={`group relative min-h-[104px] border px-3.5 py-3 text-right transition-all duration-200 ${selected===c.connector_key?"border-slate-400 bg-slate-50 shadow-sm":"border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50"}`}><div className="flex items-center justify-between gap-3"><div className="flex min-w-0 items-center gap-3"><span className={`flex h-9 w-9 shrink-0 items-center justify-center border bg-white p-1.5 ${selected===c.connector_key?"border-slate-400":"border-slate-200"}`}><img src={m.logo} alt={`${m.title} logo`} className="h-full w-full object-contain" loading="lazy" /></span><div className="min-w-0"><h2 className="truncate text-sm font-bold text-[#292929]">{m.title}</h2><p className="mt-0.5 truncate text-[11px] text-slate-500">{m.description}</p></div></div><span className="shrink-0 text-[9px] font-bold text-slate-500">{s?.has_credential?"متصل":"غير متصل"}</span></div><div className="mt-3 flex items-center justify-between border-t border-slate-100 pt-2.5"><span className="text-[9px] font-bold text-slate-400">{m.stage}</span><span className="text-[10px] text-slate-400">›</span></div></button>})}
     </div>
     {current&&<section className="mt-6 grid gap-5 lg:grid-cols-[1fr_360px]">
       <div className="border border-slate-200 bg-white p-5 sm:p-6">
