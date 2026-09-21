@@ -41,6 +41,23 @@ const statuses: Record<string, string> = {
 export default function ImportHistoryPage() {
   const router = useRouter();
   const [reopening, setReopening] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState<string | null>(null);
+
+  const deleteDocument = async (item: ImportItem) => {
+    if (!window.confirm("سيتم حذف المستند \"" + item.file_name + "\" وجميع بيانات الاستيراد المرتبطة به. لا يمكن التراجع عن الحذف. هل تريد المتابعة؟")) return;
+    setError("");
+    setDeleting(item.id);
+    try {
+      const supabase = getSupabaseBrowserClient();
+      const { error: deleteError } = await supabase.rpc("delete_import_document", { p_import_id: item.id });
+      if (deleteError) throw deleteError;
+      setItems((current) => current.filter((entry) => entry.id !== item.id));
+    } catch (deleteError) {
+      setError(deleteError instanceof Error ? deleteError.message : "تعذر حذف المستند");
+    } finally {
+      setDeleting(null);
+    }
+  };
 
   const reopen = async (importId: string) => {
     setError("");
@@ -211,19 +228,31 @@ export default function ImportHistoryPage() {
                     {item.status === "rolled_back" && item.input_type === "actual_journal_transactions" ? (
                       <button
                         type="button"
-                        onClick={() => reopen(item.id)}
-                        disabled={reopening === item.id}
+                        onClick={() => void reopen(item.id)}
+                        disabled={reopening === item.id || deleting === item.id}
                         className="rounded-lg bg-slate-950 px-4 py-2 text-xs font-bold text-white disabled:cursor-not-allowed disabled:opacity-50"
                       >
                         {reopening === item.id ? "جارٍ إعادة الفتح…" : "إعادة فتح للتعديل"}
                       </button>
                     ) : (
-                      <Link
-                        href={`/workspace/data/${item.id}`}
-                        className="rounded-lg bg-slate-950 px-4 py-2 text-xs font-bold text-white"
-                      >
-                        فتح المراجعة
-                      </Link>
+                      <div className="flex flex-wrap gap-2">
+                        <Link
+                          href={`/workspace/data/${item.id}`}
+                          className="rounded-lg bg-slate-950 px-4 py-2 text-xs font-bold text-white"
+                        >
+                          فتح المراجعة
+                        </Link>
+                        {!["published", "importing", "imported", "rolled_back"].includes(item.status) && (
+                          <button
+                            type="button"
+                            onClick={() => void deleteDocument(item)}
+                            disabled={deleting === item.id || reopening === item.id}
+                            className="rounded-lg border border-red-200 bg-white px-4 py-2 text-xs font-bold text-red-700 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
+                          >
+                            {deleting === item.id ? "جارٍ الحذف…" : "حذف المستند"}
+                          </button>
+                        )}
+                      </div>
                     )}
                   </td>
                 </tr>
