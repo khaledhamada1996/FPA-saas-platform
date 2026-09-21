@@ -106,7 +106,14 @@ export default function IntegrationsPage(){
    const {data,error:e}=await supabase.functions.invoke("integration-sync",{body:{organization_id:org,connector_id:currentState.connector_id,mode}});
    if(e){setError(e.message);setBusy("");return}
    if(data?.error){setError(String(data.error));setBusy("");return}
-   setNotice(mode==="test"?"تم اختبار الاتصال بنجاح دون تعديل النظام الخارجي.":`اكتملت المزامنة للقراءة فقط: ${data.accepted??0} سجل خام.`);
+   if(mode==="sync" && data?.run_id){
+     const normalized=await supabase.functions.invoke("integration-normalize",{body:{organization_id:org,sync_run_id:data.run_id}});
+     if(normalized.error){setError(`تم سحب البيانات، لكن تعذر تشغيل طبقة التطبيع: ${normalized.error.message}`);setBusy("");return}
+     if(normalized.data?.error){setError(`تم سحب البيانات، لكن تعذر تشغيل طبقة التطبيع: ${String(normalized.data.error)}`);setBusy("");return}
+     setNotice(`اكتملت المزامنة للقراءة فقط: ${data.accepted??0} سجل خام، وتم تطبيع ${normalized.data?.normalized??0} سجل. يحتاج للمراجعة: ${normalized.data?.needs_review??0}.`);
+   }else{
+     setNotice("تم اختبار الاتصال بنجاح دون تعديل النظام الخارجي.");
+   }
    await load();setBusy("");
  }
 
