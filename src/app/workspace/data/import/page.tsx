@@ -88,6 +88,7 @@ export default function ImportPage() {
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [stage, setStage] = useState<"select" | "validate" | "ready">("select");
+  const [sourceType, setSourceType] = useState<"journal" | "trial_balance" | "statements" | "integration">("journal");
 
   const totals = useMemo(() => ({
     debit: rows.reduce((sum, row) => sum + row.debit, 0),
@@ -221,11 +222,29 @@ export default function ImportPage() {
         <div className="border-b border-slate-200 pb-6">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
             <div>
-              <p className="text-xs font-bold text-slate-400">Actual Journal Transactions</p>
-              <h2 className="mt-1 text-2xl font-bold text-slate-950">استيراد القيود اليومية</h2>
+              <p className="text-xs font-bold text-slate-400">ACTUAL JOURNAL TRANSACTIONS</p>
+              <h2 className="mt-1 text-2xl font-bold text-slate-950">رفع القيود اليومية</h2>
               <p className="mt-2 max-w-3xl text-sm leading-7 text-slate-500">ارفع ملف CSV أو XLSX. سنكتشف الأعمدة، نتحقق من البيانات وتوازن كل قيد، ثم ننقلك إلى المطابقة والمراجعة قبل نشر Actuals.</p>
             </div>
             <button type="button" onClick={() => router.push("/workspace/data/manual")} className="shrink-0 bg-slate-950 px-4 py-2.5 text-xs font-bold text-white hover:bg-slate-800">+ إضافة قيد يومية يدوي</button>
+          </div>
+        </div>
+
+        <div className="mt-6 border border-slate-200 bg-white p-5 sm:p-6">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+            <div><p className="text-[11px] font-bold tracking-wide text-slate-400">مصدر البيانات</p><h2 className="mt-1 text-base font-extrabold text-slate-950">اختر نوع البيانات التي تملكها</h2><p className="mt-1 text-sm text-slate-500">لا تحتاج إلى تجهيز البيانات بنفس الطريقة لكل مصدر. اختر المسار الأقرب لبياناتك.</p></div>
+            <button type="button" onClick={() => router.push("/workspace/integrations")} className="text-xs font-bold text-slate-600 hover:text-slate-950">لديك نظام محاسبي؟ ربط مصدر البيانات ←</button>
+          </div>
+          <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            {[
+              {id:"journal",title:"قيود يومية",desc:"حركات مدين ودائن بالتفصيل",active:true},
+              {id:"trial_balance",title:"ميزان مراجعة",desc:"أرصدة الحسابات حسب الفترة",active:false},
+              {id:"statements",title:"قوائم مالية",desc:"دخل ومركز مالي وتدفقات",active:false},
+              {id:"integration",title:"نظام محاسبي",desc:"مزامنة من مصدر خارجي",active:false},
+            ].map((item) => <button key={item.id} type="button" disabled={!item.active} onClick={() => item.active && setSourceType(item.id as typeof sourceType)} className={sourceType===item.id ? "border border-slate-950 bg-slate-950 p-4 text-right text-white" : item.active ? "border border-slate-300 bg-white p-4 text-right hover:border-slate-500" : "border border-slate-200 bg-slate-50 p-4 text-right text-slate-400"}>
+              <span className="flex items-center justify-between gap-2"><span className="text-sm font-extrabold">{item.title}</span><span className="text-[10px] font-bold">{item.active ? "متاح الآن" : "قريبًا"}</span></span>
+              <span className={sourceType===item.id ? "mt-2 block text-xs leading-5 text-slate-300" : "mt-2 block text-xs leading-5 text-slate-500"}>{item.desc}</span>
+            </button>)}
           </div>
         </div>
 
