@@ -1,0 +1,25 @@
+import "jsr:@supabase/functions-js/edge-runtime.d.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+const H={"Content-Type":"application/json"};
+const pick=(o:any,ks:string[])=>{for(const k of ks)if(o?.[k]!==undefined&&o?.[k]!==null&&String(o[k]).trim()!=="")return o[k];return null};
+const obj=(x:any)=>x&&typeof x==="object"&&!Array.isArray(x)?x:{};
+const money=(v:any)=>{const n=Number(String(v??"").replace(/,/g,""));return Number.isFinite(n)?Math.round(n*100):0};
+const dt=(v:any)=>{if(!v)return null;const d=new Date(String(v));return Number.isNaN(d.getTime())?null:d.toISOString().slice(0,10)};
+Deno.serve(async(req)=>{
+ if(req.method!=="POST")return new Response(JSON.stringify({error:"Method not allowed"}),{status:405,headers:H});
+ try{
+  const url=Deno.env.get("SUPABASE_URL"),key=Deno.env.get("SUPABASE_ANON_KEY"),service=Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");if(!url||!key||!service)throw new Error("FUNCTION_ENV_INCOMPLETE");
+  const auth=req.headers.get("Authorization");if(!auth)throw new Error("AUTH_REQUIRED");
+  const user=createClient(url,key,{global:{headers:{Authorization:auth}},auth:{autoRefreshToken:false,persistSession:false}});
+  const{data:u}=await user.auth.getUser();if(!u.user)throw new Error("AUTH_REQUIRED");
+  const b=await req.json().catch(()=>({})),org=String(b.organization_id||""),runId=String(b.sync_run_id||"");if(!org||!runId)throw new Error("ORGANIZATION_AND_SYNC_RUN_REQUIRED");
+  const{data:access,error:ae}=await user.rpc("get_my_org_access",{p_organization_id:org});if(ae)throw ae;if(!(access??[]).some((x:any)=>x.permission_key==="connector.manage"&&x.granted===true))throw new Error("PERMISSION_DENIED");
+  const db=createClient(url,service,{auth:{autoRefreshToken:false,persistSession:false}});
+  const{data:run,error:re}=await db.from("data_sync_runs").select("id,data_source_id").eq("id",runId).eq("organization_id",org).maybeSingle();if(re)throw re;if(!run)throw new Error("SYNC_RUN_NOT_FOUND");
+  const{data:raw,error:pe}=await db.from("sync_payloads").select("source_entity_type,source_record_key,payload").eq("sync_run_id",runId).eq("organization_id",org).limit(10000);if(pe)throw pe;
+  const out:any[]=[];
+  for(const r of raw??[]){if(r.source_entity_type!=="journal_entries")continue;const p=obj(r.payload);const list=Array.isArray(p.journal_entries)?p.journal_entries:Array.isArray(p.entries)?p.entries:Array.isArray(p.transactions)?p.transactions:[p];for(let i=0;i<list.length;i++){const o=obj(list[i]),a=obj(pick(o,["account","account_data","account_info"]));const date=dt(pick(o,["date","transaction_date","entry_date","journal_date","created_at"]));const debit=money(pick(o,["debit","debit_amount","debit_value","debit_minor"])),credit=money(pick(o,["credit","credit_amount","credit_value","credit_minor"]));const aid=pick(a,["id","account_id"])??pick(o,["account_id","account_code","code"]);const missing:string[]=[];if(!date)missing.push("transaction_date");if(!aid)missing.push("account");if(debit===0&&credit===0)missing.push("amount");out.push({organization_id:org,data_source_id:run.data_source_id,sync_run_id:runId,source_entity_type:"journal_transaction",source_record_key:list.length===1?r.source_record_key:r.source_record_key+":"+String(i+1),transaction_date:date,journal_no:String(pick(o,["journal_no","journal_number","entry_number","number","reference"])??"")||null,description:String(pick(o,["description","memo","note","narration"])??"")||null,account_external_id:String(aid??"")||null,account_code:String(pick(a,["code","account_code"])??pick(o,["account_code","code"])??"")||null,account_name:String(pick(a,["name","account_name"])??pick(o,["account_name","name"])??"")||null,debit_minor:debit,credit_minor:credit,currency:String(pick(o,["currency","currency_code"])??"SAR").slice(0,3).toUpperCase(),dimensions:{branch:pick(o,["branch","branch_name","branch_id"]),department:pick(o,["department","department_name","department_id"]),cost_center:pick(o,["cost_center","cost_center_id"]),region:pick(o,["region","region_name","region_id"]),product:pick(o,["product","product_id"]),project:pick(o,["project","project_id"])},source_payload:r.payload,normalization_status:missing.length?"needs_review":"normalized",normalization_message:missing.length?"بيانات تحتاج مراجعة: "+missing.join(", "):null})}}
+  if(out.length){const{error:ie}=await db.from("integration_normalized_records").upsert(out,{onConflict:"data_source_id,source_entity_type,source_record_key"});if(ie)throw ie}
+  return new Response(JSON.stringify({ok:true,run_id:runId,normalized:out.length,needs_review:out.filter(x=>x.normalization_status==="needs_review").length,read_only:true,next_stage:"mapping"}),{status:200,headers:H});
+ }catch(e){return new Response(JSON.stringify({error:e instanceof Error?e.message:"INTEGRATION_NORMALIZATION_FAILED"}),{status:400,headers:H})}
+});
