@@ -10,7 +10,7 @@ type State={id:string;data_source_id:string;connector_id:string;connector_key:st
 const providerMeta:Record<string,{title:string;description:string;stage:string;logo:string}>={
   qoyod:{title:"قيود",logo:"https://www.qoyod.com/favicon.ico",description:"سحب الحسابات والقيود اليومية إلى طبقة البيانات المحلية للمنصة.",stage:"قابل للتفعيل الآن"},
   odoo:{title:"Odoo",logo:"https://www.odoo.com/favicon.ico",description:"موصل محاسبي للبيانات المالية والحسابات والقيود.",stage:"غير منفذ بعد"},
-  zoho_books:{title:"Zoho Books",logo:"https://www.zoho.com/favicon.ico",description:"موصل محاسبي للحسابات والقيود والفواتير والمدفوعات.",stage:"طبقة الموصل جاهزة"},
+  zoho_books:{title:"Zoho Books",logo:"https://www.zoho.com/favicon.ico",description:"موصل محاسبي للحسابات والقيود والفواتير والمدفوعات.",stage:"غير منفذ بعد"},
   foodics:{title:"Foodics",logo:"https://www.foodics.com/favicon.ico",description:"سحب المبيعات والمدفوعات والمنتجات والعملاء للتحليل المالي.",stage:"طبقة الموصل جاهزة"},
   salla:{title:"Salla",logo:"https://salla.com/favicon.ico",description:"سحب الطلبات والمدفوعات والمنتجات والعملاء.",stage:"طبقة الموصل جاهزة"},
   zid:{title:"Zid",logo:"https://zid.sa/favicon.ico",description:"سحب الطلبات والمدفوعات والمنتجات والعملاء.",stage:"طبقة الموصل جاهزة"},
