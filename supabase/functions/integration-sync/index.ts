@@ -132,7 +132,9 @@ Deno.serve(async(req)=>{
       const resources=provider==="qoyod"?QOYOD_RESOURCES:SMART_LIFE_RESOURCES;
       const smartToken=provider==="smart_life"?await loginSmartLife():null;
       for(const resource of resources){
-        for(let page=1;page<=100;page++){
+        const isSmartLife=provider==="smart_life";
+        const maxPages=isSmartLife?1:100;
+        for(let page=1;page<=maxPages;page++){
           const payload=provider==="qoyod"?await getQoyod(resource,page):await getSmartLife(resource,smartToken!); const rows=pickRows(payload,resource);
           received+=rows.length;
           if(!rows.length) break;
@@ -156,7 +158,7 @@ Deno.serve(async(req)=>{
           if(error){errors+=rows.length;throw error}
           accepted+=upserted?.length??rows.length;
           updated+=upserted?.length??rows.length;
-          if(rows.length<100) break;
+          if(isSmartLife || rows.length<100) break;
         }
       }
 
