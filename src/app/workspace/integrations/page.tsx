@@ -14,6 +14,7 @@ const providerMeta:Record<string,{title:string;description:string;stage:string}>
   foodics:{title:"Foodics",description:"سحب المبيعات والمدفوعات والمنتجات والعملاء للتحليل المالي.",stage:"طبقة الموصل جاهزة"},
   salla:{title:"Salla",description:"سحب الطلبات والمدفوعات والمنتجات والعملاء.",stage:"طبقة الموصل جاهزة"},
   zid:{title:"Zid",description:"سحب الطلبات والمدفوعات والمنتجات والعملاء.",stage:"طبقة الموصل جاهزة"},
+  smart_life:{title:"Smart Life",description:"ربط قاعدة البيانات المحاسبية للمنشأة للقراءة والتحليل.",stage:"يحتاج إعداد الاتصال"},
 };
 
 function fmt(v:string|null){return v?new Intl.DateTimeFormat("ar-SA",{dateStyle:"medium",timeStyle:"short"}).format(new Date(v)):"—"}
@@ -25,6 +26,7 @@ export default function IntegrationsPage(){
  const [selected,setSelected]=useState("qoyod");
  const [apiKey,setApiKey]=useState("");
  const [companyName,setCompanyName]=useState("قيود");
+ const [showDetails,setShowDetails]=useState(false);
  const [loading,setLoading]=useState(true);
  const [busy,setBusy]=useState("");
  const [notice,setNotice]=useState("");
@@ -103,16 +105,16 @@ export default function IntegrationsPage(){
     <Link href="/workspace/data-monitoring" className="border border-slate-300 bg-slate-100 px-4 py-2.5 text-sm font-semibold text-slate-700">مراقبة البيانات</Link>
    </div>
   </header>
-  <section className="mx-auto max-w-[1500px] px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
+  <section className="mx-auto max-w-[1500px] px-4 py-5 sm:px-6 lg:px-8 lg:py-7">
    <div className="border border-slate-200 bg-slate-50 p-4 sm:p-5"><div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between"><div><p className="text-sm font-bold text-[#292929]">قاعدة التكامل</p><p className="mt-1 text-xs leading-6 text-slate-600">النظام الخارجي = مصدر قراءة فقط. البيانات تدخل: مصدر خارجي → بيانات خام → تطبيع ومطابقة محلية → القوائم والتحليل.</p></div><span className="border border-slate-300 bg-white px-3 py-1.5 text-xs font-bold text-slate-600">READ ONLY</span></div></div>
    {notice&&<div className="mt-4 border border-slate-300 bg-slate-100 p-4 text-sm font-semibold text-slate-700">{notice}</div>}
    {error&&<div className="mt-4 border border-slate-300 bg-slate-100 p-4 text-sm text-red-700">{error}</div>}
    {loading?<div className="mt-6 border border-slate-200 bg-white p-10 text-center text-sm text-slate-500">جارٍ تحميل التكاملات…</div>:<>
-    <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-     {providers.map(c=>{const m=providerMeta[c.connector_key];const s=states.find(x=>x.connector_id===c.id);return <button key={c.id} type="button" onClick={()=>setSelected(c.connector_key)} className={`group relative min-h-[118px] border px-4 py-3.5 text-right transition-all duration-200 ${selected===c.connector_key?"border-slate-400 bg-slate-50 shadow-sm":"border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50"}`}><div className="flex items-center justify-between gap-3"><div className="flex min-w-0 items-center gap-3"><span className={`flex h-9 w-9 shrink-0 items-center justify-center border text-xs font-black ${selected===c.connector_key?"border-slate-400 bg-white":"border-slate-200 bg-slate-50"}`}>{m.title.slice(0,1)}</span><div className="min-w-0"><h2 className="truncate text-sm font-bold text-[#292929]">{m.title}</h2><p className="mt-0.5 truncate text-[11px] text-slate-500">{m.description}</p></div></div><span className="shrink-0 text-[9px] font-bold text-slate-500">{s?.has_credential?"متصل":"غير متصل"}</span></div><div className="mt-3 flex items-center justify-between border-t border-slate-100 pt-2.5"><span className="text-[9px] font-bold text-slate-400">{m.stage}</span><span className="text-[10px] text-slate-400">›</span></div></button>})}
+    <div className="mt-5 grid gap-2.5 sm:grid-cols-2 lg:grid-cols-3">
+     {providers.map(c=>{const m=providerMeta[c.connector_key];const s=states.find(x=>x.connector_id===c.id);return <button key={c.id} type="button" onClick={()=>setSelected(c.connector_key)} className={`group relative min-h-[104px] border px-3.5 py-3 text-right transition-all duration-200 ${selected===c.connector_key?"border-slate-400 bg-slate-50 shadow-sm":"border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50"}`}><div className="flex items-center justify-between gap-3"><div className="flex min-w-0 items-center gap-3"><span className={`flex h-9 w-9 shrink-0 items-center justify-center border text-xs font-black ${selected===c.connector_key?"border-slate-400 bg-white":"border-slate-200 bg-slate-50"}`}>{m.title.slice(0,1)}</span><div className="min-w-0"><h2 className="truncate text-sm font-bold text-[#292929]">{m.title}</h2><p className="mt-0.5 truncate text-[11px] text-slate-500">{m.description}</p></div></div><span className="shrink-0 text-[9px] font-bold text-slate-500">{s?.has_credential?"متصل":"غير متصل"}</span></div><div className="mt-3 flex items-center justify-between border-t border-slate-100 pt-2.5"><span className="text-[9px] font-bold text-slate-400">{m.stage}</span><span className="text-[10px] text-slate-400">›</span></div></button>})}
     </div>
     {current&&<section className="mt-6 grid gap-5 lg:grid-cols-[1fr_360px]">
-      <div className="border border-slate-200 bg-white p-5 sm:p-7">
+      <div className="border border-slate-200 bg-white p-5 sm:p-6">
        <div className="border-b border-slate-100 pb-5"><p className="text-[10px] font-bold tracking-[0.14em] text-slate-400">CONNECTION SETUP</p><h2 className="mt-1 text-xl font-bold text-[#292929]">إعداد {providerMeta[selected].title}</h2><p className="mt-2 text-sm leading-6 text-slate-500">{isQoyod?"أدخل مفتاح API الخاص بالمنشأة في قيود. لن يظهر المفتاح مرة أخرى بعد حفظه.":"تم تجهيز طبقة الموصل وقاعدة البيانات لهذا النظام؛ تنفيذ الموصل التنفيذي يتم تباعًا بعد اعتماد مخطط المصادقة الخاص بالمزوّد."}</p></div>
        {isQoyod?<div className="mt-6 max-w-2xl space-y-4">
          <label className="block text-sm font-semibold">اسم المصدر<input value={companyName} onChange={e=>setCompanyName(e.target.value)} className="mt-2 w-full border border-slate-300 bg-white px-3 py-3 text-sm outline-none focus:border-slate-500" placeholder="مثال: قيود — الشركة الرئيسية"/></label>
@@ -121,7 +123,7 @@ export default function IntegrationsPage(){
          {!canManage&&<p className="text-xs text-slate-500">لا تملك صلاحية إدارة التكاملات في هذه الشركة.</p>}
        </div>:<div className="mt-6 border border-slate-200 bg-slate-50 p-5 text-sm leading-7 text-slate-600">هذا الموصل موجود في الكتالوج ومصمم ليعمل بالقراءة فقط. لن يتم تفعيل اتصال خارجي له قبل تنفيذ طبقة المصادقة والمزامنة الخاصة بالمزوّد.</div>}
       </div>
-      <aside className="border border-slate-200 bg-slate-50 p-5">
+      <aside className="border border-slate-200 bg-slate-50 p-4.5">
        <h3 className="font-bold text-[#292929]">حالة الاتصال</h3>
        <dl className="mt-5 space-y-3 text-sm"><div className="flex justify-between gap-4"><dt className="text-slate-500">الموصل</dt><dd className="font-semibold">{current.display_name}</dd></div><div className="flex justify-between gap-4"><dt className="text-slate-500">الوضع</dt><dd className="font-semibold">قراءة فقط</dd></div><div className="flex justify-between gap-4"><dt className="text-slate-500">الاعتماد</dt><dd className="font-semibold">{currentState?.has_credential?"موجود":"غير محفوظ"}</dd></div><div className="flex justify-between gap-4"><dt className="text-slate-500">آخر نجاح</dt><dd className="font-semibold text-left">{fmt(currentState?.last_success_at??null)}</dd></div></dl>
        {currentState?.last_error_message&&<div className="mt-5 border border-slate-300 bg-white p-3 text-xs leading-5 text-red-700">{currentState.last_error_message}</div>}
