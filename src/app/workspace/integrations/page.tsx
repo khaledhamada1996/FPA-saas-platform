@@ -45,16 +45,16 @@ export default function IntegrationsPage(){
    if(!userData.user){window.location.assign("/login?next=/workspace/integrations");return}
    const org=sessionStorage.getItem("activeOrganizationId");
    if(!org){window.location.assign("/start");return}
-   const [{data:cat,error:ce},{data:st,error:se},{data:access,error:ae}]=await Promise.all([
+   const [{data:cat,error:ce},{data:st,error:se},{data:access,error:ae},{data:le,error:lee}]=await Promise.all([
      supabase.rpc("get_connector_catalog",{p_organization_id:org}),
      supabase.rpc("get_connector_connection_state",{p_organization_id:org}),
      supabase.rpc("get_my_org_access",{p_organization_id:org}),
      supabase.from("legal_entities").select("id,name,code").eq("organization_id",org).order("name")
    ]);
-   const first=ce||se||ae||le?.error;if(first){setError(first.message);setLoading(false);return}
+   const first=ce||se||ae||lee;if(first){setError(first.message);setLoading(false);return}
    setCatalog((cat??[]) as Connector[]);
-   setLegalEntities((le?.data??[]) as {id:string;name:string;code?:string|null}[]);
-   setLegalEntityId((le?.data?.[0]?.id??"") as string);
+   setLegalEntities((le??[]) as {id:string;name:string;code?:string|null}[]);
+   setLegalEntityId((le?.[0]?.id??"") as string);
    setStates((st??[]) as State[]);
    setCanManage((access??[]).some((x:{permission_key?:string;granted?:boolean})=>x.permission_key==="connector.manage"&&x.granted===true));
    setLoading(false);
