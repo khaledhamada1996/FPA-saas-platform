@@ -25,6 +25,10 @@ export default function IntegrationsPage(){
  const [states,setStates]=useState<State[]>([]);
  const [selected,setSelected]=useState("qoyod");
  const [apiKey,setApiKey]=useState("");
+ const [smartBaseUrl,setSmartBaseUrl]=useState("https://smarterp.top/api/v1.0");
+ const [smartCompany,setSmartCompany]=useState("");
+ const [smartUsername,setSmartUsername]=useState("");
+ const [smartPassword,setSmartPassword]=useState("");
  const [companyName,setCompanyName]=useState("قيود");
  const [showDetails,setShowDetails]=useState(false);
  const [loading,setLoading]=useState(true);
@@ -55,6 +59,7 @@ export default function IntegrationsPage(){
  const current=providers.find(c=>c.connector_key===selected)||providers[0];
  const currentState=states.find(s=>s.connector_id===current?.id);
  const isQoyod=selected==="qoyod";
+ const isSmartLife=selected==="smart_life";
 
  async function connect(){
    const org=sessionStorage.getItem("activeOrganizationId");
@@ -80,6 +85,13 @@ export default function IntegrationsPage(){
        const {error:se}=await supabase.rpc("save_connector_secret",{p_organization_id:org,p_connector_id:current.id,p_secret:apiKey.trim()});
        if(se)throw se;
        setApiKey("");
+     }
+     if(isSmartLife){
+       if(!smartBaseUrl.trim()||!smartCompany.trim()||!smartUsername.trim()||!smartPassword.trim()) throw new Error("أكمل عنوان API واسم الشركة واسم المستخدم وكلمة المرور");
+       const credential=JSON.stringify({base_url:smartBaseUrl.trim().replace(/\\/$/, ""),company:smartCompany.trim(),username:smartUsername.trim(),password:smartPassword});
+       const {error:se}=await supabase.rpc("save_connector_secret",{p_organization_id:org,p_connector_id:current.id,p_secret:credential});
+       if(se)throw se;
+       setSmartPassword("");
      }
      setNotice("تم حفظ إعداد الاتصال داخل Vault بشكل آمن. النظام الخارجي سيُعامل كمصدر قراءة فقط.");
      await load();
@@ -115,10 +127,10 @@ export default function IntegrationsPage(){
     </div>
     {current&&<section className="mt-6 grid gap-5 lg:grid-cols-[1fr_360px]">
       <div className="border border-slate-200 bg-white p-5 sm:p-6">
-       <div className="border-b border-slate-100 pb-5"><p className="text-[10px] font-bold tracking-[0.14em] text-slate-400">CONNECTION SETUP</p><h2 className="mt-1 text-xl font-bold text-[#292929]">إعداد {providerMeta[selected].title}</h2><p className="mt-2 text-sm leading-6 text-slate-500">{isQoyod?"أدخل مفتاح API الخاص بالمنشأة في قيود. لن يظهر المفتاح مرة أخرى بعد حفظه.":"تم تجهيز طبقة الموصل وقاعدة البيانات لهذا النظام؛ تنفيذ الموصل التنفيذي يتم تباعًا بعد اعتماد مخطط المصادقة الخاص بالمزوّد."}</p></div>
-       {isQoyod?<div className="mt-6 max-w-2xl space-y-4">
+       <div className="border-b border-slate-100 pb-5"><p className="text-[10px] font-bold tracking-[0.14em] text-slate-400">CONNECTION SETUP</p><h2 className="mt-1 text-xl font-bold text-[#292929]">إعداد {providerMeta[selected].title}</h2><p className="mt-2 text-sm leading-6 text-slate-500">{isQoyod?"أدخل مفتاح API الخاص بالمنشأة في قيود. لن يظهر المفتاح مرة أخرى بعد حفظه.":isSmartLife?"أدخل بيانات API الخاصة بحساب Smart Life. سيتم استخدامها لتسجيل الدخول إلى API وسحب البيانات فقط، ولن تُرسل أي عمليات تعديل إلى Smart Life.":"تم تجهيز طبقة الموصل وقاعدة البيانات لهذا النظام؛ تنفيذ الموصل التنفيذي يتم تباعًا بعد اعتماد مخطط المصادقة الخاص بالمزوّد."}</p></div>
+       {(isQoyod||isSmartLife)?<div className="mt-6 max-w-2xl space-y-4">
          <label className="block text-sm font-semibold">اسم المصدر<input value={companyName} onChange={e=>setCompanyName(e.target.value)} className="mt-2 w-full border border-slate-300 bg-white px-3 py-3 text-sm outline-none focus:border-slate-500" placeholder="مثال: قيود — الشركة الرئيسية"/></label>
-         <label className="block text-sm font-semibold">مفتاح API<input type="password" autoComplete="off" value={apiKey} onChange={e=>setApiKey(e.target.value)} className="mt-2 w-full border border-slate-300 bg-white px-3 py-3 text-sm outline-none focus:border-slate-500" placeholder="أدخل المفتاح هنا"/></label>
+         {isSmartLife&&<><label className="block text-sm font-semibold">عنوان API<input value={smartBaseUrl} onChange={e=>setSmartBaseUrl(e.target.value)} className="mt-2 w-full border border-slate-300 bg-white px-3 py-3 text-sm outline-none focus:border-slate-500" placeholder="https://.../api/v1.0"/></label><label className="block text-sm font-semibold">اسم الشركة في Smart Life<input value={smartCompany} onChange={e=>setSmartCompany(e.target.value)} className="mt-2 w-full border border-slate-300 bg-white px-3 py-3 text-sm outline-none focus:border-slate-500" placeholder="اسم الشركة / الشركة في API"/></label><label className="block text-sm font-semibold">اسم المستخدم<input value={smartUsername} onChange={e=>setSmartUsername(e.target.value)} className="mt-2 w-full border border-slate-300 bg-white px-3 py-3 text-sm outline-none focus:border-slate-500" placeholder="اسم مستخدم API"/></label><label className="block text-sm font-semibold">كلمة المرور<input type="password" autoComplete="new-password" value={smartPassword} onChange={e=>setSmartPassword(e.target.value)} className="mt-2 w-full border border-slate-300 bg-white px-3 py-3 text-sm outline-none focus:border-slate-500" placeholder="كلمة مرور API"/></label></>}{isQoyod&&<label className="block text-sm font-semibold">مفتاح API<input type="password" autoComplete="off" value={apiKey} onChange={e=>setApiKey(e.target.value)} className="mt-2 w-full border border-slate-300 bg-white px-3 py-3 text-sm outline-none focus:border-slate-500" placeholder="أدخل المفتاح هنا"/></label>}
          <div className="flex flex-wrap gap-2"><button disabled={!canManage||busy==="connect"} onClick={()=>void connect()} className="border border-slate-400 bg-slate-200 px-5 py-3 text-sm font-bold text-[#292929] disabled:opacity-50">{busy==="connect"?"جارٍ الحفظ…":"حفظ الاتصال"}</button>{currentState?.has_credential&&<><button disabled={!!busy} onClick={()=>void run("test")} className="border border-slate-400 bg-slate-100 px-5 py-3 text-sm font-bold text-[#292929] disabled:opacity-50">{busy==="test"?"جارٍ الاختبار…":"اختبار الاتصال"}</button><button disabled={!!busy} onClick={()=>void run("sync")} className="border border-slate-400 bg-slate-200 px-5 py-3 text-sm font-bold text-[#292929] disabled:opacity-50">{busy==="sync"?"جارٍ المزامنة…":"مزامنة الآن"}</button></>}</div>
          {!canManage&&<p className="text-xs text-slate-500">لا تملك صلاحية إدارة التكاملات في هذه الشركة.</p>}
        </div>:<div className="mt-6 border border-slate-200 bg-slate-50 p-5 text-sm leading-7 text-slate-600">هذا الموصل موجود في الكتالوج ومصمم ليعمل بالقراءة فقط. لن يتم تفعيل اتصال خارجي له قبل تنفيذ طبقة المصادقة والمزامنة الخاصة بالمزوّد.</div>}
