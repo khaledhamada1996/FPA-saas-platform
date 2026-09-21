@@ -64,10 +64,10 @@ export default function IntegrationsPage(){
    setLoading(false);
  }
  useEffect(()=>{void load()},[]);
- useEffect(()=>{if(currentState?.data_source_id)void refreshReview(currentState.data_source_id)},[currentState?.data_source_id]);
  const providers=useMemo(()=>catalog.filter(c=>providerMeta[c.connector_key]),[catalog]);
  const current=providers.find(c=>c.connector_key===selected)||providers[0];
  const currentState=states.find(s=>s.connector_id===current?.id);
+ useEffect(()=>{if(currentState?.data_source_id)void refreshReview(currentState.data_source_id)},[currentState?.data_source_id]);
  const isQoyod=selected==="qoyod";
  const isSmartLife=selected==="smart_life";
 
