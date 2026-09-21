@@ -48,11 +48,13 @@ export default function OpeningBalancesPage() {
     setDescription("");
   };
 
-  const saveEntry = async () =>
-    setError(""); setMessage(""); if (!org || !date) return setError("حدد تاريخ القيد الافتتاحي"); if (lines.length < 2) return setError("القيد الافتتاحي يجب أن يحتوي على حساب مدين وحساب دائن على الأقل");
+  const saveEntry = async () => {
+    setError(""); setMessage("");
+    if (!org || !date) return setError("حدد تاريخ القيد الافتتاحي");
+    if (lines.length < 2) return setError("القيد الافتتاحي يجب أن يحتوي على حساب مدين وحساب دائن على الأقل");
     const payload = lines.map(l => ({ account_id: l.account_id, debit_minor: toMinor(l.debit), credit_minor: toMinor(l.credit), description: l.description || description || null }));
-    if (payload.some(l => !l.account_id || !Number.isFinite(l.debit_minor) || !Number.isFinite(l.credit_minor) || l.debit_minor < 0 || l.credit_minor < 0 || (l.debit_minor > 0 && l.credit_minor > 0) || (l.debit_minor === 0 && l.credit_minor === 0))) return setError("كل سطر يجب أن يحتوي على حساب وقيمة في طرف واحد فقط");
-    if (new Set(payload.map(l => l.account_id)).size !== payload.length) return setError("لا يمكن تكرار نفس الحساب داخل القيد الافتتاحي"); if (totals.debit !== totals.credit) return setError("القيد الافتتاحي غير متوازن: يجب أن يتساوى إجمالي المدين مع إجمالي الدائن");
+    if (payload.some(l => !l.account_id || !Number.isFinite(l.debit_minor) || !Number.isFinite(l.credit_minor) || l.debit_minor < 0 || l.credit_minor < 0 || (l.debit_minor > 0 && l.credit_minor > 0) || (l.debit_minor === 0 && l.credit_minor === 0))) return setError("كل سطر يجب أن يحتوي على حساب ومبلغ مدين أو دائن فقط");
+    if (totals.debit !== totals.credit || totals.debit <= 0) return setError("القيد الافتتاحي يجب أن يكون متوازنًا وإجمالي المدين أكبر من صفر");
     setWorking(true);
     if (editingId) {
       const line = payload[0];
@@ -64,9 +66,15 @@ export default function OpeningBalancesPage() {
       await load(org, date);
       return;
     }
-    const { data, error: e } = await supabase.rpc("create_opening_entry", { p_organization_id: org, p_opening_date: date, p_lines: payload, p_description: description || null }); setWorking(false);
-    if (e) return setError(e.message); setMessage(`تم حفظ القيد الافتتاحي كمسودة — ${data?.line_count ?? payload.length} سطر — مدين ${fromMinor(totals.debit)} ودائن ${fromMinor(totals.credit)}`); setLines([emptyLine(), emptyLine()]); setDescription(""); await load(org, date);
+    const { data, error: e } = await supabase.rpc("create_opening_entry", { p_organization_id: org, p_opening_date: date, p_lines: payload, p_description: description || null });
+    setWorking(false);
+    if (e) return setError(e.message);
+    setMessage(`تم حفظ القيد الافتتاحي كمسودة — ${data?.line_count ?? payload.length} سطر — مدين ${fromMinor(totals.debit)} ودائن ${fromMinor(totals.credit)}`);
+    setLines([emptyLine(), emptyLine()]);
+    setDescription("");
+    await load(org, date);
   };
+
   const approve = async () => { setWorking(true); setError(""); setMessage(""); const { data, error: e } = await supabase.rpc("approve_opening_balances", { p_organization_id: org, p_opening_date: date }); setWorking(false); if (e) return setError(e.message); setMessage(`تم اعتماد ${data?.approved_lines ?? 0} سطرًا بعد التحقق من التوازن`); await load(org, date); };
   const lock = async () => { setWorking(true); setError(""); setMessage(""); const { data, error: e } = await supabase.rpc("lock_opening_balances", { p_organization_id: org, p_opening_date: date }); setWorking(false); if (e) return setError(e.message); setMessage(`تم قفل ${data?.locked_lines ?? 0} سطرًا`); await load(org, date); };
   const remove = async (row: OpeningRow) => {
