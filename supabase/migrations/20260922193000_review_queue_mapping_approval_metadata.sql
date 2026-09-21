@@ -1,0 +1,27 @@
+create or replace function public.get_integration_review_queue(p_data_source_id uuid,p_sync_run_id uuid default null,p_status text default 'needs_review',p_limit integer default 100,p_offset integer default 0)
+returns jsonb language plpgsql security definer set search_path='' as $$
+declare v_org uuid; v_total bigint; v_rows jsonb;
+begin
+ select organization_id into v_org from public.data_sources where id=p_data_source_id;
+ if v_org is null then raise exception 'DATA_SOURCE_NOT_FOUND'; end if;
+ if not public.has_org_permission(v_org,'mapping.view') and not public.has_org_permission(v_org,'view') and not public.has_org_permission(v_org,'admin') then raise exception 'Permission denied'; end if;
+ if p_limit<1 or p_limit>500 then raise exception 'Invalid limit'; end if;
+ if p_offset<0 then raise exception 'Invalid offset'; end if;
+ if p_status not in ('needs_review','rejected','unmapped','all') then raise exception 'Invalid status'; end if;
+ select count(*) into v_total from public.integration_normalized_records r
+ where r.data_source_id=p_data_source_id and (p_sync_run_id is null or r.sync_run_id=p_sync_run_id)
+ and (p_status='all' or (p_status='needs_review' and (r.normalization_status='needs_review' or r.mapping_status='needs_review' or r.dimension_mapping_status='needs_review')) or (p_status='rejected' and (r.normalization_status='rejected' or r.mapping_status='rejected' or r.dimension_mapping_status='rejected')) or (p_status='unmapped' and (r.mapping_status='unmapped' or r.dimension_mapping_status='unmapped')));
+ select coalesce(jsonb_agg(to_jsonb(x) order by x.transaction_date nulls last,x.source_record_key),'[]'::jsonb) into v_rows from (
+ select r.id,r.sync_run_id,r.source_entity_type,r.source_record_key,r.transaction_date,r.journal_no,r.description,r.account_external_id,r.account_code,r.account_name,r.debit_minor,r.credit_minor,r.currency,r.dimensions,r.normalization_status,r.normalization_message,r.mapped_account_id,r.mapping_version,r.mapping_status,r.mapping_message,r.mapped_dimensions,r.dimension_mapping_status,r.dimension_mapping_message,
+        am.id as account_mapping_id,am.created_by as account_mapping_created_by
+ from public.integration_normalized_records r
+ left join public.account_mappings am on am.organization_id=v_org
+   and am.mapping_version=coalesce(r.mapping_version,'v1')
+   and am.source_code=coalesce(r.account_external_id,r.account_code)
+ where r.data_source_id=p_data_source_id and (p_sync_run_id is null or r.sync_run_id=p_sync_run_id)
+ and (p_status='all' or (p_status='needs_review' and (r.normalization_status='needs_review' or r.mapping_status='needs_review' or r.dimension_mapping_status='needs_review')) or (p_status='rejected' and (r.normalization_status='rejected' or r.mapping_status='rejected' or r.dimension_mapping_status='rejected')) or (p_status='unmapped' and (r.mapping_status='unmapped' or r.dimension_mapping_status='unmapped')))
+ order by r.transaction_date nulls last,r.source_record_key limit p_limit offset p_offset) x;
+ return jsonb_build_object('total',v_total,'limit',p_limit,'offset',p_offset,'items',v_rows);
+end; $$;
+revoke all on function public.get_integration_review_queue(uuid,uuid,text,integer,integer) from public,anon;
+grant execute on function public.get_integration_review_queue(uuid,uuid,text,integer,integer) to authenticated;
