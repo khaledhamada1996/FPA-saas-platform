@@ -38,6 +38,7 @@ export default function IntegrationsPage(){
  const [notice,setNotice]=useState("");
  const [error,setError]=useState("");
  const [canManage,setCanManage]=useState(false);
+ const [review,setReview]=useState<any|null>(null);
 
  async function load(){
    setLoading(true);setError("");
@@ -61,11 +62,14 @@ export default function IntegrationsPage(){
    setLoading(false);
  }
  useEffect(()=>{void load()},[]);
+ useEffect(()=>{if(currentState?.data_source_id)void refreshReview(currentState.data_source_id)},[currentState?.data_source_id]);
  const providers=useMemo(()=>catalog.filter(c=>providerMeta[c.connector_key]),[catalog]);
  const current=providers.find(c=>c.connector_key===selected)||providers[0];
  const currentState=states.find(s=>s.connector_id===current?.id);
  const isQoyod=selected==="qoyod";
  const isSmartLife=selected==="smart_life";
+
+ async function refreshReview(dataSourceId:string,syncRunId?:string|null){ const {data,error:e}=await supabase.rpc("get_integration_review_summary",{p_data_source_id:dataSourceId,p_sync_run_id:syncRunId??null}); if(e){setError(e.message);return} setReview(data??null); }
 
  async function connect(){
    const org=sessionStorage.getItem("activeOrganizationId");
@@ -120,7 +124,10 @@ export default function IntegrationsPage(){
      const normalized=await supabase.functions.invoke("integration-normalize",{body:{organization_id:org,sync_run_id:data.run_id}});
      if(normalized.error){setError(`تم سحب البيانات، لكن تعذر تشغيل طبقة التطبيع: ${normalized.error.message}`);setBusy("");return}
      if(normalized.data?.error){setError(`تم سحب البيانات، لكن تعذر تشغيل طبقة التطبيع: ${String(normalized.data.error)}`);setBusy("");return}
-     setNotice(`اكتملت المزامنة للقراءة فقط: ${data.accepted??0} سجل خام، وتم تطبيع ${normalized.data?.normalized??0} سجل. يحتاج للمراجعة: ${normalized.data?.needs_review??0}.`);
+     const mapped=await supabase.rpc("apply_integration_account_mappings",{p_data_source_id:currentState.data_source_id,p_sync_run_id:data.run_id,p_mapping_version:"v1"}); if(mapped.error){setError(`تم التطبيع، لكن تعذر تطبيق مطابقة الحسابات: ${mapped.error.message}`);setBusy("");return}
+     const dimensions=await supabase.rpc("apply_integration_dimension_mappings",{p_data_source_id:currentState.data_source_id,p_sync_run_id:data.run_id}); if(dimensions.error){setError(`تمت مطابقة الحسابات، لكن تعذر تطبيق مطابقة الأبعاد: ${dimensions.error.message}`);setBusy("");return}
+     await refreshReview(currentState.data_source_id,data.run_id);
+     setNotice(`اكتملت المزامنة: ${data.accepted??0} سجل خام، ثم التطبيع والمطابقة. راجع لوحة الحالة قبل المصالحة.`);
    }else{
      setNotice("تم اختبار الاتصال بنجاح دون تعديل النظام الخارجي.");
    }
@@ -160,6 +167,7 @@ export default function IntegrationsPage(){
        {currentState?.last_error_message&&<div className="mt-5 border border-slate-300 bg-white p-3 text-xs leading-5 text-red-700">{currentState.last_error_message}</div>}
       </aside>
     </section>}
+    {currentState&&review&&<section className="mt-5 border border-slate-200 bg-white p-5 sm:p-6"><div className="flex items-center justify-between border-b border-slate-100 pb-4"><div><p className="text-[10px] font-bold tracking-[0.14em] text-slate-400">INTEGRATION REVIEW</p><h2 className="mt-1 text-lg font-bold">حالة دورة البيانات</h2></div><button type="button" disabled={!!busy} onClick={()=>void refreshReview(currentState.data_source_id,review.sync_run_id)} className="border border-slate-300 bg-slate-100 px-4 py-2 text-xs font-bold">تحديث</button></div><div className="mt-5 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">{[["إجمالي السجلات",review.total],["تم التطبيع",review.normalized],["مطابقة الحسابات",review.account_mapped],["مطابقة الأبعاد",review.dimension_mapped],["حسابات تحتاج مراجعة",review.account_needs_review],["أبعاد تحتاج مراجعة",review.dimension_needs_review],["مرفوض",review.rejected],["جاهز للمصالحة",review.ready_for_reconciliation]].map(([label,value],i)=><div key={String(label)} className="border border-slate-200 p-3"><p className="text-[11px] text-slate-500">{String(label)}</p><p className="mt-1 text-xl font-bold">{String(value)}</p></div>)}</div><div className="mt-5 border-t border-slate-100 pt-4 text-xs font-semibold text-slate-600">خام → تطبيع → مطابقة الحسابات → مطابقة الأبعاد → مراجعة → مصالحة → نشر</div></section>}
    </>}
   </section>
  </main>
